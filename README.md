@@ -13,7 +13,6 @@ If you want to use this crate, please guarantee that you have follow rules below
 + using `Rust 2018` (full proc macro support is required, including [proc_macro] & [proc_macro_attribute])
 + using `cargo` (`cargo` will produce some environment variable according to `Cargo.toml`, we need that)
 + be familiar with `Rust` (because it's developed for `Rust` )
-+ Using nightly version.
 
 As a reference, my versions are:
 + `cargo`: cargo 1.35.0-nightly (95b45eca1 2019-03-06)
@@ -29,10 +28,10 @@ Two ways supported: from `Github` or `crates.io`.
 The difference between them is that `Github` is latest but unstable and `crates.io` is stable but might not be latest.
 
 ##### install from `Github`
-
+(warn, it does not work now! I'm testing to guarantee that crate will work perfectly)
 ```toml
 [dependencies.commander_rust]
-git = "https://github.com/doubledimos/commander_rust"
+git = "https://github.com/MSDimos/commander_rust"
 branch = "master"
 ```
 
@@ -126,7 +125,7 @@ There are several rules you should follow.
 1. All `#[options]` should defined above `#[command]` and `#[entry]`
 2. DO NOT define options duplicate!!! As a concession, You can define the same option on different command and entry.
 3. Private options are visible to specific sub-commands. Public options are visible to all sub-commands.
-4. 
+4. At least one sub-command!
 
 
 # warn
