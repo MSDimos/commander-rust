@@ -1,0 +1,97 @@
+.wrap {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  text-align: center;
+}
+
+.shutter {
+  width: 100%;
+  transition: transform 0.5s linear;
+  z-index: 2;
+  position: absolute;
+  left: 0;
+}
+
+.up {
+  background: #1f2227;
+  height: 50%;
+  top: 0;
+}
+
+.down {
+  background: #1d252c;
+  height: 50%;
+  top: 50%;
+}
+
+.content {
+  position: absolute;
+  display: inline-block;
+  max-width: 48rem;
+  top: 50%;
+  left: 50%;
+  transform: translateY(-50%) translateX(-50%) rotateZ(0);
+  border-radius: 0.4rem;
+  padding: 0 1.5rem;
+  background: #282c34;
+  text-align: start;
+  transition: transform 0.5s linear;
+  z-index: 3;
+}
+
+.expand .up {
+  transform: translateY(-100%) rotateZ(0);
+  z-index: 99;
+}
+
+.expand .down {
+  transform: translateY(100%) rotateZ(0);
+  z-index: 99;
+}
+
+.content.upflow {
+  z-index: 99;
+  transform: translateX(-50%) translateY(calc(-100vh - 100%)) rotateZ(0);
+}
+
+
+.header {
+  position: absolute;
+  top: 1rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin:auto;
+  font-size: 2rem;
+  color: white;
+}
+
+.header h4 {
+  margin-bottom: 1.6rem;
+}
+
+.header span {
+  font-size: 1.4rem;
+}
+
+.header i {
+  font-size: 1rem;
+}
+
+.header a {
+  text-decoration: none;
+  color: wheat;
+}
+
+.inside {
+  top: 2rem;
+  left: 0;
+  width: 100%;
+  z-index: 9;
+}
+
+.inside.show {
+  display: block;
+}
+

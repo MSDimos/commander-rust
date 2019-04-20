@@ -1,0 +1,19 @@
+[package]
+name = "commander-rust"
+version = "0.1.0"
+authors = ["dimos <doubledimos@outlook.com>"]
+edition = "2018"
+
+[dependencies.commander-core]
+path = "crates/commander-core"
+
+[dependencies.commander-macros]
+path = "crates/commander-macros"
+
+[dependencies]
+lazy_static = "1.2.0"
+
+[features]
+default = ["cn"]
+cn = []
+en = []

@@ -1,0 +1,22 @@
+[package]
+name = "commander-macros"
+version = "0.1.0"
+authors = ["dimos <doubledimos@outlook.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies.syn]
+version = "0.15.26"
+features = ["full", "extra-traits", "parsing"]
+
+[dependencies]
+proc-macro2 = "0.4.24"
+quote = "0.6.11"
+lazy_static = "1.2.0"
+
+[features]
+default = ["cn"]
+cn = []
+en = []
