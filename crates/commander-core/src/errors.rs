@@ -12,7 +12,7 @@ pub const ERR_RED: Msg = "\x1b[0;31m 编译错误 \x1b[0m";
 #[cfg(feature = "en")]
 pub const ERR_RED: Msg = "\x1b[0;31m Compile time error \x1b[0m";
 
-#[cfg(feature = "cn")]
-pub const ARG_DONT_MATCH: Msg = "参数不匹配，请检查输入的参数";
-#[cfg(feature = "en")]
-pub const ARG_DONT_MATCH: Msg = "arguments don't match, check your inputs";
+//#[cfg(feature = "cn")]
+//pub const ARG_DONT_MATCH: Msg = "参数不匹配，请检查输入的参数";
+//#[cfg(feature = "en")]
+//pub const ARG_DONT_MATCH: Msg = "arguments don't match, check your inputs";

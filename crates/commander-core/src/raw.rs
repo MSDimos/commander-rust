@@ -1,13 +1,31 @@
 use std::iter::FromIterator;
 use crate::{ Instance, ArgumentType, Argument };
-use crate::errors::{ error, ARG_DONT_MATCH };
 use std::ops::{ Deref, DerefMut };
 
-/// Encapsulation of `Instance`.
+/// Encapsulation of `Vec<String>`.
+///
+/// For example, when you defined a command or option that accepts a argument.
+/// ```ignore
+/// #[option(-o, --output <output_dir>)]
+/// #[command(parse <dir> [dirs...])]
+/// fn parse(dir: Path, dirs: Vec<Path>, cli: Cli) {
+///     let output: Raw = cli.get("output");
+///
+///     if output.is_empty() {
+///         // no output directories inputted.
+///     } else {
+///         // output directories inputted
+///     }
+/// }
+/// ```
+/// When you input a sequence of String, and you want to using these String.
+/// But for the most time, we don't only using String. For instance, we want to using `Path`.
+/// This time, we can use `Raw` to convert it to `Path` or others. Any type that implements `From<Raw>` can do it.
+/// That's why types of parameters for command processing methods should have implemented `From<Raw>`
 ///
 /// Being used for type converting.
-/// Any type that implements `From<Raw>` can be used as a parameter type for command processing methods.
-/// By default, we implement several types of inheritance.
+/// Any type that implements `From<Raw>` can be used as a parameter type of command processing methods.
+///
 #[derive(Debug, Clone)]
 pub struct Raw(Vec<String>);
 
@@ -39,7 +57,6 @@ impl Raw {
     #[doc(hidden)]
     pub fn divide_cmd(ins: &Instance, args: &Vec<Argument>) -> Vec<Raw> {
         let mut raws = vec![];
-        let len = ins.args.len();
         let mut iter = ins.args.iter();
 
         for arg in args {

@@ -127,6 +127,6 @@ impl Debug for Application {
             write!(f, "{}  {}\n", " ".repeat(max_len - used_space), cmd.desc.clone().unwrap_or_default())?;
         }
 
-        write!(f, "\n")
+        write!(f, "\nSee '{} <command> --help' for more information on a specific command\n", self.name)
     }
 }
