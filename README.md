@@ -1,3 +1,6 @@
+# other languages
+[中文文档](https://github.com/MSDimos/commander-rust/blob/master/docs/README_CN.md)
+
 # why this ?
 
 For a long time, developing cli in `Rust` is difficult.
