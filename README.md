@@ -152,4 +152,4 @@ Any useful contribute are welcome. You can send pull request to me.
 
 # License
 
-GPL. Because open source is future.
+GPL-3.0. Because open source is future.

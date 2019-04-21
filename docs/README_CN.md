@@ -142,4 +142,4 @@ description = "Using for test"
 
 # 协议
 
-GPL协议覆盖。
+GPL-3.0协议覆盖。
