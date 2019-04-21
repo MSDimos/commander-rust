@@ -42,10 +42,7 @@ fn gen(file: String, cli: Cli) {
         println!("hash is {}", content);
     }
 
-    // you can use has(idx: &str) to check if user input `output` or not here.
-    if cli.has("output") {
-        write_file(output.as_ref(), content, force);
-    }
+    write_file(output.as_ref(), content, force);
 }
 
 

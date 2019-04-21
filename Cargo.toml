@@ -1,14 +1,22 @@
 [package]
 name = "commander-rust"
-version = "0.1.0"
+version = "1.0.1"
+description = "A better way to develop CLI in Rust"
 authors = ["dimos <doubledimos@outlook.com>"]
 edition = "2018"
+license = "GPL"
+license-file = "./LICENSE"
+documentation = "https://github.com/MSDimos/commander-rust"
+homepage = "https://github.com/MSDimos/commander-rust"
+repository = "https://github.com/MSDimos/commander-rust"
 
 [dependencies.commander-core]
 path = "crates/commander-core"
+version = "1.0.0"
 
 [dependencies.commander-macros]
 path = "crates/commander-macros"
+version = "1.0.1"
 
 [dependencies]
 lazy_static = "1.2.0"
