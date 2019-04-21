@@ -122,6 +122,16 @@ version = "0.1.0"
 description = "Using for test"
 ```
 
+# full example
+
+I offered a full example, it's `hash`.
+It's using for generating MD5 of files or strings.
+See `./examples/`for more details.
+
+# homepage
+I developed homepage for it. See `./homepage` for more details.
+It's developed bashed on `React`. I like it.
+
 # rules
 
 There are several rules you should follow.
