@@ -32,7 +32,9 @@ export default function Index() {
   return (
     <React.Fragment>
       <Shutter expand={state} code={code}>
-        <p>Hello world!</p>
+        <div>
+
+        </div>
       </Shutter>
       <div className='next' onClick={() => setState(!state)}>
         <div className='btn'>+</div>

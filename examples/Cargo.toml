@@ -1,14 +1,13 @@
 [package]
 authors = ["dimos <doubledimos@outlook.com>"]
 edition = "2018"
-name = "example-test"
+name = "hash"
 version = "0.1.0"
-description = "Yes, it is!"
+description = "generating hash of files or string, using MD5 hash"
+
+[dependencies]
+md5 = "0.6.1"
 
 [dependencies.commander-rust]
 path = "../"
-
-[features]
-default = ["cn"]
-cn = []
-en = []
+features = ["en"]
