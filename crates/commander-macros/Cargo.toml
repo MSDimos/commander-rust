@@ -3,6 +3,7 @@ name = "commander-macros"
 version = "1.0.1"
 authors = ["dimos <doubledimos@outlook.com>"]
 edition = "2018"
+description = "This crate is used by commander-rust only."
 
 [lib]
 proc-macro = true
@@ -17,6 +18,6 @@ quote = "0.6.11"
 lazy_static = "1.2.0"
 
 [features]
-default = ["cn"]
+default = ["en"]
 cn = []
 en = []
