@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 use proc_macro2::Span as Span2;
 use quote::quote;
 use syn::{ Ident, ItemFn, parse_macro_input };
-use tokens::{ CommandsInputToken, CommandToken, OptionsToken};
+use tokens::{ CommandToken, OptionsToken};
 
 use crate::errors::{error, DONT_MATCH, ENTRY_ONLY_MAIN, NO_SUB_CMD_NAMES_MAIN, OPT_DUPLICATE_DEFINITION};
 use crate::tools::generate_call_fn;
@@ -361,6 +361,8 @@ pub fn run(_: TokenStream) -> TokenStream {
                     } else {
                         f(&cli.get_raws(), cli);
                     }
+                } else if cli.has("version") || cli.has("V") {
+                    println!("version: {}", VERSION);
                 } else {
                     println!("{:#?}", app);
                 }

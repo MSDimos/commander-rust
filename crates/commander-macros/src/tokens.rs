@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use syn::{ Ident, LitStr, token, Token, bracketed };
 use syn::parse::{ Parse, ParseStream, Result };
-use syn::punctuated::Punctuated;
 use quote::{ ToTokens, quote };
 use proc_macro2::{ TokenStream as TokenStream2 };
 
@@ -40,15 +39,6 @@ pub struct OptionsToken {
     pub long: Ident,
     pub arg: Option<Argument>,
     pub desc: Option<LitStr>,
-}
-
-#[doc(hidden)]
-pub struct CommandsInputToken(pub Punctuated<Ident, Token![,]>);
-
-impl Parse for CommandsInputToken {
-    fn parse(tokens: ParseStream) -> Result<Self> {
-        Ok(CommandsInputToken(tokens.parse_terminated(Ident::parse)?))
-    }
 }
 
 impl ToTokens for ArgumentType {

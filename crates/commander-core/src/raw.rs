@@ -51,7 +51,7 @@ impl Raw {
     #[doc(hidden)]
     #[inline]
     pub fn is_empty(&self) -> bool {
-        (self.0).len() > 0
+        (self.0).len() == 0
     }
 
     #[doc(hidden)]
@@ -110,7 +110,6 @@ impl Raw {
     #[doc(hidden)]
     pub fn divide_opt(ins: &Instance, arg: &Option<Argument>) -> Raw {
         if let Some(arg) = arg {
-            let len = ins.args.len();
             let mut iter = ins.args.iter();
 
             match arg.ty {
@@ -260,7 +259,7 @@ macro_rules! impl_all {
 
 impl_all![i8, i16, i32, i64, i128, isize];
 impl_all![u8, u16, u32, u64, u128, usize];
-impl_all![f32, f64, bool];
+impl_all![f32, f64, bool, char];
 
 
 impl From<Raw> for String {

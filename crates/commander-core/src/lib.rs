@@ -24,12 +24,12 @@
 
 
 mod raw;
-mod errors;
 mod fmt;
 
 use std::ops::Index;
 use regex::Regex;
 use std::collections::HashMap;
+
 pub use raw::Raw;
 
 /// The type of argument.
