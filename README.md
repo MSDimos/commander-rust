@@ -55,7 +55,7 @@ Yes, That's all. Very easy!
 // this is required! Beacuse we used `run!()`, it's a proc_macro
 #![feature(proc_macro_hygiene)]
 
-// Only four items you will use!
+// Only five items you will use!
 use commander_rust::{ Cli, command, option, entry, run };
 
 

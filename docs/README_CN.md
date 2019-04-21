@@ -51,7 +51,7 @@ commander_rust = "^1.0.0" # 指定其他任意你需要的版本
 // 必须，因为我们使用了`run！（）`，它是proc_macro宏
 #![feature(proc_macro_hygiene)]
 
-// 你只需要导入这四个东西
+// 你只需要导入这五个东西
 use commander_rust::{ Cli, command, option, entry, run };
 
 
