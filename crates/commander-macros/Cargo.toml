@@ -4,6 +4,8 @@ version = "1.0.1"
 authors = ["dimos <doubledimos@outlook.com>"]
 edition = "2018"
 description = "This crate is used by commander-rust only."
+license = "GPL"
+license-file = "./LICENSE"
 
 [lib]
 proc-macro = true
