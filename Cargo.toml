@@ -4,7 +4,6 @@ version = "1.0.1"
 description = "A better way to develop CLI in Rust"
 authors = ["dimos <doubledimos@outlook.com>"]
 edition = "2018"
-license = "GPL-3.0"
 license-file = "./LICENSE"
 documentation = "https://github.com/MSDimos/commander-rust"
 homepage = "https://github.com/MSDimos/commander-rust"
@@ -15,11 +14,11 @@ exclude = [
     "docs/"
 ]
 
-[dev-dependencies.commander-core]
+[dependencies.commander-core]
 path = "crates/commander-core"
 version = "1.0.0"
 
-[dev-dependencies.commander-macros]
+[dependencies.commander-macros]
 path = "crates/commander-macros"
 version = "1.0.1"
 
