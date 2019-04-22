@@ -25,11 +25,12 @@
 
 mod raw;
 mod fmt;
+mod pattern;
 
 use std::ops::Index;
-use regex::Regex;
 use std::collections::HashMap;
 
+use pattern::{ Pattern, PatternType };
 pub use raw::Raw;
 
 /// The type of argument.
@@ -511,73 +512,68 @@ impl Instance {
     }
 }
 
-/// Using for creating Instances according user's input content.
-///
-/// Dont call it.
-#[doc(hidden)]
 pub fn normalize(args: Vec<String>) -> Vec<Instance> {
-    let cmd_name = Regex::new(r"^\w+$").unwrap();
-    let complex_long = Regex::new(r"^--(\w{2,})=(.+)$").unwrap();
-    let short = Regex::new(r"^-(\w+)$",).unwrap();
-    let long = Regex::new(r"^--(\w{2,})$").unwrap();
-    let mut opt_ins = vec![];
-    let mut iter = args.into_iter().skip(1).enumerate();
+    let mut instances = vec![];
     let mut head = Instance::empty();
+    let mut args = args.into_iter().skip(1).enumerate();
 
-    while let Some((idx, arg)) = iter.next() {
-        if short.is_match(&arg) {
+    while let Some((idx, arg)) = args.next() {
+        let reg = Pattern::match_str(&arg);
 
-            if let Some(caps) = short.captures(&arg) {
-                let mut all: Vec<&str> = (&caps[1]).split("").collect();
-
-                all.dedup_by(|a, b| a == b);
+        match reg.ty {
+            PatternType::Stmt => {
+                let mut all_opts: Vec<&str> = reg.groups[1].split_terminator(" ").collect();
 
                 if !head.is_empty() {
-                    opt_ins.push(head);
+                    instances.push(head);
                 }
 
-                for x in all.into_iter() {
+                head = Instance::empty();
+                all_opts.dedup_by(|a, b| a == b);
+                all_opts.retain(|x| !x.is_empty());
+
+                instances.push(Instance {
+                    name: String::from(reg.groups[0]),
+                    args: all_opts.into_iter().map(|x| String::from(x)).collect(),
+                });
+            },
+            PatternType::Short => {
+                let mut all_opts: Vec<&str> = reg.groups[0].split("").collect();
+
+                all_opts.dedup_by(|a, b| a == b);
+                all_opts.retain(|x| !x.is_empty());
+
+                if !head.is_empty() {
+                    instances.push(head);
+                }
+
+                for x in all_opts.into_iter() {
                     if x.len() == 1 {
-                        opt_ins.push(Instance::new(x));
+                        instances.push(Instance::new(x));
                     }
                 }
 
-                head = opt_ins.pop().unwrap_or(Instance::empty());
-            }
-        } else if complex_long.is_match(&arg) {
-            if !head.is_empty() {
-                opt_ins.push(head);
-            }
-
-            head = Instance::empty();
-
-            if let Some(caps) = complex_long.captures(&arg) {
-                let mut all: Vec<&str> = (&caps[2]).split_terminator(" ").collect();
-
-                all.dedup_by(|a, b| a == b);
-                all.retain(|x| !x.is_empty());
-
-                opt_ins.push(Instance {
-                    name: String::from(&caps[1]),
-                    args: all.into_iter().map(|x| String::from(x)).collect(),
-                });
-            }
-        } else if long.is_match(&arg) {
-            if let Some(caps) = long.captures(&arg) {
+                head = instances.pop().unwrap_or(Instance::empty());
+            },
+            PatternType::Long => {
                 if !head.is_empty() {
-                    opt_ins.push(head);
+                    instances.push(head);
                 }
 
-                head = Instance::new(&caps[1]);
-            }
-        } else if cmd_name.is_match(&arg) && idx == 0 {
-            head = Instance::new(&arg);
-        } else {
-            head.args.push(arg);
+                head = Instance::new(reg.groups[0]);
+            },
+            PatternType::Word if idx == 0 => {
+                head = Instance::new(&arg);
+            },
+            _ => {
+                head.args.push(arg);
+            },
         }
     }
 
-    opt_ins.push(head);
+    if !head.is_empty() {
+        instances.push(head);
+    }
 
-    opt_ins
+    instances
 }

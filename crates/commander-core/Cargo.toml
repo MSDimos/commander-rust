@@ -1,11 +1,10 @@
 [package]
 name = "commander-core"
-version = "1.0.0"
+version = "1.1.0-alpha"
 authors = ["dimos <doubledimos@outlook.com>"]
 edition = "2018"
 description = "This crate is used by commander-rust only."
 license-file = "./LICENSE"
 
 [dependencies]
-regex = "1.1.0"
 lazy_static = "1.2.0"
