@@ -3,83 +3,81 @@
 mod methods;
 
 use commander_rust::{ Cli, command, option, entry, run };
-use md5::{ compute, Digest };
+use md5::{ compute };
 
 use methods::{ write_file, read_file };
 use std::process::exit;
 use std::path::Path;
+
 
 #[option(-d, --display, "display hash")]
 #[option(-o, --output <file>, "output into directory")]
 #[option(-f, --force, "if output file is not existed, create it")]
 #[command(gen <file>, "generate hash of file")]
 fn gen(file: String, cli: Cli) {
-    let file_path: &Path = file.as_ref();
-    // get private option `output`, if it doesn't exist, return ".hash"
-    let output = cli.get_or("output", String::from(".hash"));
-    // get private option `force`, because `force` doesn't have argument, so using has(idx: &str) instead
     let force = cli.has("force");
-    // get public option `length`, if it doesn't exist, return 32
-    let len = cli.get_or("length", 32);
-    let file_content = {
-        if file_path.is_file() {
-            read_file(file_path)
-        } else {
-            file
-        }
-    };
-    let mut content = format!("{:x}", compute(file_content));
+    let display = cli.get_or("display", false);
+    let output = cli.get_or("output", String::from("./"));
+    let length = cli.get_or("length", 32);
+    let path: &Path = file.as_ref();
+    let content;
+    let md5;
 
-    if output.len() == 0 {
-        eprintln!("please specify the output file");
+    if !path.exists() {
+        eprintln!("{:#?} don't exist. Specify a file.", path);
         exit(0);
     }
 
-    content.truncate(len);
-
-    // get private option `display`, because `force` doesn't have argument, so using has(idx: &str) instead
-    if cli.has("display") {
-        println!("hash is {}", content);
+    if !path.is_file() {
+        eprintln!("{:#?} is not a file.", path);
+        exit(0);
     }
 
-    write_file(output.as_ref(), content, force);
+    content = read_file(path);
+    md5 = format!("{:?}", compute(content));
+
+    if display {
+        println!("MD5 is {}", md5);
+    }
+
+    write_file(output.as_ref(), md5, force);
+
 }
 
 
-#[command(cmp <A> <B>, "compare A with B. A is file path or literal string, B is file path or hash")]
-fn cmp(original: String, target: String, cli: Cli) {
-    let ori_path: &Path = original.as_ref();
-    let mut ori_hash = {
-        if ori_path.is_file() {
-            format!("{:x}", compute(read_file(ori_path)))
-        } else  {
-            format!("{:x}", compute(original))
-        }
-    };
-    let tar_path: &Path = target.as_ref();
-    let mut tar_hash = {
-        if tar_path.is_file() {
-            format!("{:x}", compute(read_file(tar_path)))
-        } else if tar_path.is_dir() && tar_path.join(".hash").is_file() {
-            read_file(tar_path.join(".hash").as_path())
-        } else {
-            target
-        }
-    };
+#[command(cmp <A_file> <B_hash>, "compare A with B. A is file, B is hash")]
+fn cmp(file: String, hash: String, cli: Cli) {
+    let length = cli.get_or("length", 32);
+    let path: &Path = file.as_ref();
+    let content;
+    let mut md5;
 
-    ori_hash.truncate(cli.get_or("length", 32));
-    tar_hash.truncate(cli.get_or("length", 32));
-    println!("MD5 of A is: {}", ori_hash);
-    println!("MD5 of B is: {}", tar_hash);
 
-    if ori_hash == tar_hash {
+    if !path.exists() {
+        eprintln!("{:#?} don't exist. Specify a file.", path);
+        exit(0);
+    }
+
+    if !path.is_file() {
+        eprintln!("{:#?} is not a file.", path);
+        exit(0);
+    }
+
+    content = read_file(path);
+    md5 = format!("{:?}", compute(content));
+    md5.truncate(length);
+
+    println!("hash of A is {}", md5);
+    println!("B is {}", hash);
+
+    if md5 == hash {
         println!("They are same");
     } else {
         println!("They are different");
     }
 
-
 }
+
 
 #[option(-l, --length <length>, "specify length of hash, maximum is 32")]
 #[entry]

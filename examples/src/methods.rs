@@ -1,29 +1,19 @@
-use std::fs::{ File, OpenOptions, write, create_dir_all, read };
+use std::fs::{ write, create_dir_all, read };
 use std::path::Path;
 use std::process::exit;
-use std::io::{Error, ErrorKind, Write, Result};
+use std::io::{Result};
 
 pub fn write_file(path: &Path, content: String, force: bool) -> Result<()> {
-    if !path.exists() {
-        if !force {
-            eprintln!("can't find output file, please add '-f' to create it");
+    let path = path.join(".hash");
+
+    if !force {
+        if !path.exists() {
+            eprintln!("{:?} doesn't exist, please add '-f' to create it", path);
             exit(0);
-        } else {
-            if path.is_file() {
-                create_dir_all(path.parent().unwrap())?;
-                write(path, content.as_bytes())?;
-            } else if path.is_dir() {
-                if path.ends_with(".hash") {
-                    create_dir_all(path.parent().unwrap())?;
-                    write(path, content.as_bytes())?;
-                } else {
-                    create_dir_all(path)?;
-                    write(path.join(".hash"), content.as_bytes())?;
-                }
-            }
         }
     } else {
-        write(path, content.as_bytes())?;
+        create_dir_all(path.parent().unwrap())?;
+        write(path, content)?;
     }
 
     Ok(())
