@@ -31,7 +31,7 @@ Two ways supported: from `Github` or `crates.io`.
 The difference between them is that `Github` is latest but unstable and `crates.io` is stable but might not be latest.
 
 ##### install from `Github`
-(warn, it does not work now! I'm testing to guarantee that crate will work perfectly)
+
 ```toml
 [dependencies.commander_rust]
 git = "https://github.com/MSDimos/commander_rust"

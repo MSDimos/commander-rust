@@ -36,7 +36,7 @@ branch = "master"
 ```
 
 #### 从`crates.io`下载
-(注意，现在还无法使用，我在测试以保障功能的稳定)
+
 ```toml
 [dependencies]
 commander_rust = "^1.0.0" # 指定其他任意你需要的版本
