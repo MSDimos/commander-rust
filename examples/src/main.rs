@@ -21,10 +21,10 @@ fn gen(file: String, cli: Cli) {
     let length = cli.get_or("length", 32);
     let path: &Path = file.as_ref();
     let content;
-    let md5;
+    let mut md5;
 
     if !path.exists() {
-        eprintln!("{:#?} don't exist. Specify a file.", path);
+        eprintln!("{:#?} doesn't exist. Specify a file.", path);
         exit(0);
     }
 
@@ -35,6 +35,7 @@ fn gen(file: String, cli: Cli) {
 
     content = read_file(path);
     md5 = format!("{:?}", compute(content));
+    md5.truncate(length);
 
     if display {
         println!("MD5 is {}", md5);
@@ -54,7 +55,7 @@ fn cmp(file: String, hash: String, cli: Cli) {
 
 
     if !path.exists() {
-        eprintln!("{:#?} don't exist. Specify a file.", path);
+        eprintln!("{:#?} doesn't exist. Specify a file.", path);
         exit(0);
     }
 
