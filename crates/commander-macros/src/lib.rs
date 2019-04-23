@@ -16,7 +16,7 @@ use quote::quote;
 use syn::{ Ident, ItemFn, parse_macro_input };
 use tokens::{ CommandToken, OptionsToken};
 
-use crate::errors::{error, DONT_MATCH, ENTRY_ONLY_MAIN, NO_SUB_CMD_NAMES_MAIN, OPT_DUPLICATE_DEFINITION};
+use crate::errors::{error, DON_NOT_MATCH, ENTRY_ONLY_MAIN, NO_SUB_CMD_NAMES_MAIN, OPT_DUPLICATE_DEFINITION, error_nt};
 use crate::tools::generate_call_fn;
 
 macro_rules! prefix {
@@ -127,11 +127,11 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     let call_fn = generate_call_fn(&decl.inputs, &call_fn_name, &raw_ident, &ident);
 
     if format!("{}", command.name) != name {
-        error(DONT_MATCH);
+        error(DON_NOT_MATCH, &format!("{}", command.name));
     }
 
     if name == "main" {
-        error(NO_SUB_CMD_NAMES_MAIN);
+        error_nt(NO_SUB_CMD_NAMES_MAIN);
     }
 
     command.check();
@@ -195,7 +195,7 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
     if opts.contains_key(&name) {
         if let Some(v) = opts.get_mut(&name) {
             if v.contains(&opt_name) {
-                error(OPT_DUPLICATE_DEFINITION)
+                error(OPT_DUPLICATE_DEFINITION, &opt_name);
             } else {
                 v.push(opt_name);
             }
@@ -253,7 +253,7 @@ pub fn entry(_: TokenStream, main: TokenStream) -> TokenStream {
 
     // init can be used with fn main only
     if target != String::from("main") {
-        error(ENTRY_ONLY_MAIN);
+        error_nt(ENTRY_ONLY_MAIN);
     }
 
     if let Some(v) = opts.get("main") {

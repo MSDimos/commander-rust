@@ -24,4 +24,3 @@ version = "1.0.1"
 
 [dependencies]
 lazy_static = "1.2.0"
-

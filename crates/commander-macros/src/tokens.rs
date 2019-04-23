@@ -5,7 +5,7 @@ use syn::parse::{ Parse, ParseStream, Result };
 use quote::{ ToTokens, quote };
 use proc_macro2::{ TokenStream as TokenStream2 };
 
-use crate::errors::{ error, ARG_DUPLICATE_DEFINITION, ORDER_ERROR };
+use crate::errors::{error, ARG_DUPLICATE_DEFINITION, ORDER_ERROR, error_nt};
 
 #[derive(PartialEq, Eq)]
 #[derive(Debug)]
@@ -97,14 +97,14 @@ impl CommandToken {
 
             // check duplicate
             if set.contains(&name) {
-                error(ARG_DUPLICATE_DEFINITION);
+                error(ARG_DUPLICATE_DEFINITION, &name);
             } else {
                 set.insert(name);
             }
             // check order
             if arg.ty == ArgumentType::RequiredSingle || arg.ty == ArgumentType::RequiredMultiple {
                 if !flag {
-                    error(ORDER_ERROR);
+                    error_nt(ORDER_ERROR);
                 }
             } else {
                 flag = false;
@@ -113,7 +113,7 @@ impl CommandToken {
             // check last argument
             if idx != self.args.len() - 1 {
                 if arg.ty == ArgumentType::RequiredMultiple || arg.ty == ArgumentType::OptionalMultiple {
-                    error(ORDER_ERROR);
+                    error_nt(ORDER_ERROR);
                 }
             }
         }
