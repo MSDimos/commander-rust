@@ -125,5 +125,11 @@ mod test {
             ty: PatternType::Others,
             groups: vec![],
         }, Pattern::match_str("/path/"));
+
+        assert_eq!(Pattern {
+            full: "--no-output=./path/",
+            ty: PatternType::Stmt,
+            groups: vec!["no-output", "./path/"],
+        }, Pattern::match_str("--no-output=./path/"));
     }
 }
