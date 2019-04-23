@@ -10,7 +10,7 @@ use proc_macro2::{ TokenStream as TokenStream2 };
 /// But we need a common way to call it, so we need to generate inputs tokens needed.
 
 #[doc(hidden)]
-pub fn generate_call_fn(inputs: &Punctuated<FnArg, token::Comma>, call_fn_name: &Ident, raw_ident: &Ident, fn_name: &Ident) -> TokenStream2 {
+pub fn generate_call_fn(inputs: &Punctuated<FnArg, token::Comma>, call_fn_name: &Ident, fn_name: &Ident) -> TokenStream2 {
     let mut tokens: Vec<TokenStream2> = vec![];
 
     for (idx, arg) in inputs.iter().enumerate() {
@@ -49,7 +49,7 @@ pub fn generate_call_fn(inputs: &Punctuated<FnArg, token::Comma>, call_fn_name: 
     }
 
     (quote! {
-        fn #call_fn_name(raws: &Vec<#raw_ident>, cli: Cli) {
+        fn #call_fn_name(raws: &Vec<_commander_rust_Raw>, cli: _commander_rust_Cli) {
             #fn_name(#(#tokens,)*)
         }
     }).into()

@@ -123,8 +123,7 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     let command: CommandToken = parse_macro_input!(cmd as CommandToken);
     // generating call function， because we can't call unstable (uncertain quantity parameters) function
     let call_fn_name = Ident::new(&prefix!(name, "call"), ident.span());
-    let raw_ident = Ident::new(&prefix!("Raw"), Span2::call_site());
-    let call_fn = generate_call_fn(&decl.inputs, &call_fn_name, &raw_ident, &ident);
+    let call_fn = generate_call_fn(&decl.inputs, &call_fn_name, &ident);
 
     if format!("{}", command.name) != name {
         error(DON_NOT_MATCH, &format!("{}", command.name));
