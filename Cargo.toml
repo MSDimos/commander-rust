@@ -16,11 +16,11 @@ exclude = [
 
 [dependencies.commander-core]
 path = "crates/commander-core"
-version = "1.1.0-alpha"
+version = "1.1.1"
 
 [dependencies.commander-macros]
 path = "crates/commander-macros"
-version = "1.0.1"
+version = "1.1.1"
 
 [dependencies]
 lazy_static = "1.2.0"
