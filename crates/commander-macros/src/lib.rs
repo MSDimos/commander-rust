@@ -11,7 +11,6 @@ use proc_macro::{ TokenStream };
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
-use proc_macro2::Span as Span2;
 use quote::quote;
 use syn::{ Ident, ItemFn, parse_macro_input };
 use tokens::{ CommandToken, OptionsToken};
