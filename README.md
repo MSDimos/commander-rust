@@ -4,8 +4,6 @@
 # why this ?
 
 For a long time, developing cli in `Rust` is difficult.
-Since Rust is a static language, the compiler needs to know all the details at compile time. 
-It conflicts with the dynamics of the CLI.
 The community offers a wide range of solutions. Yes, they're excellent, but they're not very simple.
 
 Inspired by [commander.js](https://github.com/tj/commander.js) & [rocket.rs](https://rocket.rs), the crate was born.
@@ -64,7 +62,7 @@ Yes, That's all. Very easy!
 // this is required! Beacuse we used `run!()`, it's a proc_macro
 #![feature(proc_macro_hygiene)]
 
-// Only five items you will use!
+// Only five items you will use
 use commander_rust::{ Cli, command, option, entry, run };
 
 
@@ -86,10 +84,10 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
     let format = cli.get_or("format", String::new("%s"));
     
     if cli.has("recursive") {
-        let quite: bool = cli.get_or("quite", false);
+        let silently = cli.get_or("silently", false);
         
-        if quite {
-            // silently delete all files
+        if silently {
+            // delete all files silently
             // just like `rm -rf /`
         } else {
             // tell the world I'm going to delete the files
@@ -100,7 +98,7 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
 }
 
 // options here are public, options above `#[command]` are private
-#[option(-q, --quite <quite_or_not>, "dont display anything")]
+#[option(-s, --silently <quite_or_not>, "don't display anything")]
 #[entry]
 fn main() {
      // Run it now!!!!!
@@ -140,8 +138,8 @@ It's using for generating MD5 of files or strings.
 See `./examples/`for more details.
 
 # homepage
-I developed homepage for it. See `./homepage` for more details.
-It's developed bashed on `React`. I like it.
+
+Under development. See ./homepage
 
 # rules
 

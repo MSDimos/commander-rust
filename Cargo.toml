@@ -8,6 +8,7 @@ license-file = "./LICENSE"
 documentation = "https://github.com/MSDimos/commander-rust"
 homepage = "https://github.com/MSDimos/commander-rust"
 repository = "https://github.com/MSDimos/commander-rust"
+readme = "./README.md"
 exclude = [
     "homepage/",
     "examples/",

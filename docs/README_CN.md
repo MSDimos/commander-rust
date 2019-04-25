@@ -78,10 +78,10 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
     let format = cli.get_or("format", String::new("%s"));
     
     if cli.has("recursive") {
-        let quite: bool = cli.get_or("quite", false);
+        let silently: bool = cli.get_or("silently", false);
         
-        if quite {
-            // silently delete all files
+        if silently {
+            // delete all files silently 
             // just like `rm -rf /`
         } else {
             // tell the world I'm going to delete the files
@@ -92,7 +92,7 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
 }
 
 // 定义在这里的options是公共的，定义在`#[command]`之上的则是私有的。
-#[option(-q, --quite <quite_or_not>, "dont display anything")]
+#[option(-s, --silently <silently_or_not>, "dont display anything")]
 #[entry]
 fn main() {
      // 调用run！()，开始运行
@@ -131,7 +131,7 @@ description = "Using for test"
 
 # 主页
 
-我为其开发了一个主页，它基于`React`而开发。
+正在开发中。
 
 # 规则
 
@@ -148,7 +148,7 @@ description = "Using for test"
 
 # 贡献
 
-任何有用的贡献都是欢迎的！让我们一起完善`Rust`的生态！
+任何有用的贡献都是欢迎的！
 
 # 协议
 
