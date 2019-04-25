@@ -55,7 +55,9 @@ impl<'a> Pattern<'a> {
     }
 
     pub fn is_long(s: &str) -> bool {
-        s.len() >= 3 && s.starts_with("--") && Pattern::is_word(&s[2..])
+        s.len() >= 3 && s.starts_with("--") && (
+            Pattern::is_word(&s[2..]) || s[2..].split_terminator("-").collect::<Vec<&str>>().iter().all(|s| Pattern::is_word(s))
+        )
     }
 
     pub fn is_stmt(s: &str) -> bool {

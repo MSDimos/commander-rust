@@ -51,7 +51,7 @@ branch = "master"
 
 ```toml
 [dependencies]
-commander_rust = "^1.0.0" # or other version you want to install
+commander_rust = "1.1.3" # or other version you want to install
 ```
 
 #### using it

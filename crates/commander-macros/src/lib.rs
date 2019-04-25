@@ -1,5 +1,4 @@
 #![recursion_limit = "256"]
-#![allow(unused_mut, dead_code)]
 
 mod tokens;
 mod errors;
@@ -21,7 +20,9 @@ use crate::tools::generate_call_fn;
 macro_rules! prefix {
     ($($i: tt),*) => {
         {
-            let mut prefix_str = String::from("_commander_rust");
+            let mut prefix_str = String::new();
+
+            prefix_str.push_str("_commander_rust");
             $(
                 prefix_str.push_str(&format!("_{}", $i));
             )*
