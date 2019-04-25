@@ -59,7 +59,20 @@ Yes, That's all. Very easy!
 use commander_rust::{ Cli, command, option, entry, run };
 
 
-fn _rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
+// what's option? what's command? 
+// See `commander.js` and document of `commander-rust` for more!
+// Note, types of parameters are not fixed, any type implemented `From<Raw>` is valid!
+// So you can even use `rmdir(dir: i32, other_dirs: Vec<i32>, cli: Cli)` here.
+// And `Cli` is not required! So you can miss it.
+// See document of `commander-rust` for more details.
+#[option(-s, --format <format>, "format output")]
+#[option(-r, --recursive, "recursively")]
+#[command(rmdir <dir> [otherDirs...], "remove files and directories")]
+fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
+    // If compiler can't give U valid error information,
+    // Consider using a _rmdir function to wrap all of the following code
+    // and then call it here.
+    // See this issue：`https://github.com/dtolnay/syn/issues/622`
     if cli.get_or("recursive", false) {
         let quite: bool = cli.get("quite").into();
         
@@ -74,33 +87,13 @@ fn _rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
     }
 }
 
-
-// what's option? what's command? 
-// See `commander.js` and document of `commander-rust` for more!
-// Note, types of parameters are not fixed, any type implemented `From<Raw>` is valid!
-// So you can even use `rmdir(dir: i32, other_dirs: Vec<i32>, cli: Cli)` here.
-// And `Cli` is not required! So you can miss it.
-// See document of `commander-rust` for more details.
-#[option(-s, --format <format>, "format output")]
-#[option(-r, --recursive, "recursively")]
-#[command(rmdir <dir> [otherDirs...], "remove files and directories")]
-fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
-    // You might be confused, 
-    // Why call a function instead of doing everything here? Isn't that superfluous ?
-    // This is a bug of compiler. 
-    // If you do everything here, the compiler can't give good advice When your code goes wrong.
-    // You can have a try, using `let three = 1 + "2"` replace code below. See compiler's error message.
-    // See more details: `https://github.com/dtolnay/syn/issues/622`
-    
-     _rmdir(dir, other_dirs, cli);
-}
-
 // options here are public, options above `#[command]` are private
 #[option(-q, --quite <quite_or_not>, "dont display anything")]
 #[entry]
 fn main() {
      // Run it now!!!!!
      let app = run!();
+     // print app is same as you input `--help`.
      println!("app is {:#?}", app);
 }
 ```
@@ -121,6 +114,12 @@ name = "example-test"
 version = "0.1.0"
 description = "Using for test"
 ```
+
+# error
+
+I can't ensure that it will work perfectly in all cases.
+My abilities are very limited, testing is not my skill and be sorry about that.
+I'm learning it. So if you find any BUG, please tell me. Thanks.
 
 # full example
 

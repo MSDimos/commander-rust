@@ -55,7 +55,18 @@ commander_rust = "^1.0.0" # 指定其他任意你需要的版本
 use commander_rust::{ Cli, command, option, entry, run };
 
 
-fn _rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
+// 什么是option？什么是command？
+// 参考`commander.js`和`commander-rust`的文档。
+// 注意，函数的参数类型并不是固定的，任意实现了`From<Raw>`的类型都可以。
+// `Cli`并不是必须的参数，你可以省略它。
+#[option(-s, --format <format>, "format output")]
+#[option(-r, --recursive, "recursively")]
+#[command(rmdir <dir> [otherDirs...], "remove files and directories")]
+fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
+    // 如果编译器无法给出正确有效的错误提示
+    // 考虑使用一个_rmdir函数去包裹以下所有代码，
+    // 然后在这里调用它即可。
+    // 参考这个issue：`https://github.com/dtolnay/syn/issues/622`
     if cli.get_or("recursive", false) {
         let quite: bool = cli.get("quite").into();
         
@@ -68,22 +79,6 @@ fn _rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
     } else {
         // drink a cup of coffee, relax.
     }
-}
-
-// 什么是option？什么是command？
-// 参考`commander.js`和`commander-rust`的文档。
-// 注意，函数的参数类型并不是固定的，任意实现了`From<Raw>`的类型都可以。
-// `Cli`并不是必须的参数，你可以省略它。
-#[option(-s, --format <format>, "format output")]
-#[option(-r, --recursive, "recursively")]
-#[command(rmdir <dir> [otherDirs...], "remove files and directories")]
-fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
-    // 你或许感到疑惑，为什么不直接在这个函数里面做所有的事儿，而是调用了另一个函数？
-    // 这是编译器的一个BUG。
-    // 如果你在这里直接编写代码，当你的代码出现错误时，编译器不能提供正确的错误信息，这使得调试变得困难。
-    // 如果不信，你可以试试写一段错误的代码在这里。
-    // 参考这个issue：`https://github.com/dtolnay/syn/issues/622`
-     _rmdir(dir, other_dirs, cli);
 }
 
 // 定义在这里的options是公共的，定义在`#[command]`之上的则是私有的。
@@ -112,6 +107,10 @@ version = "0.1.0"
 description = "Using for test"
 ```
 
+# 错误
+
+我无法保证它在所有情况下都能工作良好，实际上，由于一些客观原因的限制，测试并不能良好的进行。
+如果你发现任何BUG，请向我反馈。感谢。
 
 # 完整的例子
 
