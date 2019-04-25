@@ -7,6 +7,14 @@
 
 受到[commander.js](https://github.com/tj/commander.js) & [rocket.rs](https://rocket.rs)的启发，这个crate就此诞生了。
 
+# 特性
++ API友好
++ 使用简单
++ 近似动态语言的支持
++ 低性能损耗
++ 自动实现`--version` & `--help`
++ 自动调用对应命令
+
 # 限制
 
 如果你想使用这个crate，你必须得保证你遵守以下的一些规则
@@ -67,8 +75,10 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
     // 考虑使用一个_rmdir函数去包裹以下所有代码，
     // 然后在这里调用它即可。
     // 参考这个issue：`https://github.com/dtolnay/syn/issues/622`
-    if cli.get_or("recursive", false) {
-        let quite: bool = cli.get("quite").into();
+    let format = cli.get_or("format", String::new("%s"));
+    
+    if cli.has("recursive") {
+        let quite: bool = cli.get_or("quite", false);
         
         if quite {
             // silently delete all files
@@ -87,6 +97,7 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
 fn main() {
      // 调用run！()，开始运行
      let app = run!();
+     // 打印app功能同输入--help一样
      println!("app is {:#?}", app);
 }
 ```

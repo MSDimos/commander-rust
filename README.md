@@ -10,6 +10,15 @@ The community offers a wide range of solutions. Yes, they're excellent, but they
 
 Inspired by [commander.js](https://github.com/tj/commander.js) & [rocket.rs](https://rocket.rs), the crate was born.
 
+
+# features
++ API friendly
++ easy to use
++ support for approximate dynamic language
++ low performance loss
++ automatically support for `--version` & `--help`
++ automatically run corresponding commands
+
 # limit
 
 If you want to use this crate, please guarantee that you have follow rules below:
@@ -73,8 +82,11 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
     // Consider using a _rmdir function to wrap all of the following code
     // and then call it here.
     // See this issue：`https://github.com/dtolnay/syn/issues/622`
-    if cli.get_or("recursive", false) {
-        let quite: bool = cli.get("quite").into();
+    
+    let format = cli.get_or("format", String::new("%s"));
+    
+    if cli.has("recursive") {
+        let quite: bool = cli.get_or("quite", false);
         
         if quite {
             // silently delete all files
@@ -93,7 +105,7 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
 fn main() {
      // Run it now!!!!!
      let app = run!();
-     // print app is same as you input `--help`.
+     // printing app is same as you inputting `--help`.
      println!("app is {:#?}", app);
 }
 ```
