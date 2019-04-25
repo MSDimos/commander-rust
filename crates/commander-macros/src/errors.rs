@@ -18,5 +18,5 @@ pub const ORDER_ERROR: Msg = "The parameter order is incorrect. All `<>` must ap
 pub const ENTRY_ONLY_MAIN: Msg = "#[entry] can be used for fn main only";
 pub const DON_NOT_MATCH: Msg = "The name of sub-command should be same as the name of it's function";
 pub const OPT_DUPLICATE_DEFINITION: Msg = "Duplicate definitions of options";
-pub const INVALID_ARGUMENTS: Msg = "Invalid argument, this means we don't know why. Please open issue with your code";
+// pub const INVALID_ARGUMENTS: Msg = "Invalid argument, this means we don't know why. Please open issue with your code";
 pub const NO_SUB_CMD_NAMES_MAIN: Msg = "Sub-command can't be named as [main]";

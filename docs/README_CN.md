@@ -39,7 +39,7 @@ branch = "master"
 
 ```toml
 [dependencies]
-commander_rust = "^1.0.0" # 指定其他任意你需要的版本
+commander_rust = "1.1.3" # 指定其他任意你需要的版本
 ```
 
 #### 使用它

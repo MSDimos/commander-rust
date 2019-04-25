@@ -218,8 +218,8 @@ impl Parse for OptionsToken {
     fn parse(tokens: ParseStream) -> Result<Self> {
         let opt_token: OptionsToken;
         let short;
-        let long;
         let arg;
+        let mut long;
         let mut desc = None;
 
         // skip -
@@ -229,7 +229,16 @@ impl Parse for OptionsToken {
         tokens.parse::<token::Comma>()?;
         tokens.parse::<Token![-]>()?;
         tokens.parse::<Token![-]>()?;
-        long = tokens.parse()?;
+        long = tokens.parse::<Ident>()?;
+
+        if tokens.peek(Token![-]) {
+            let long_right;
+            let span = long.span();
+
+            tokens.parse::<Token![-]>()?;
+            long_right = tokens.parse::<Ident>()?;
+            long = Ident::new(&format!("{}_{}", long, long_right), span);
+        }
 
         if tokens.peek(token::Lt) {
             // skip <

@@ -1,5 +1,4 @@
 #![recursion_limit = "256"]
-#![allow(unused_mut, dead_code)]
 
 mod tokens;
 mod errors;
@@ -11,7 +10,6 @@ use proc_macro::{ TokenStream };
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
-use proc_macro2::Span as Span2;
 use quote::quote;
 use syn::{ Ident, ItemFn, parse_macro_input };
 use tokens::{ CommandToken, OptionsToken};
@@ -22,7 +20,9 @@ use crate::tools::generate_call_fn;
 macro_rules! prefix {
     ($($i: tt),*) => {
         {
-            let mut prefix_str = String::from("_commander_rust");
+            let mut prefix_str = String::new();
+
+            prefix_str.push_str("_commander_rust");
             $(
                 prefix_str.push_str(&format!("_{}", $i));
             )*

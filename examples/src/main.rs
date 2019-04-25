@@ -9,14 +9,13 @@ use methods::{ write_file, read_file };
 use std::process::exit;
 use std::path::Path;
 
-
-#[option(-d, --display, "display hash")]
+#[option(-n, --no-display, "don't display hash")]
 #[option(-o, --output <file>, "output into directory")]
 #[option(-f, --force, "if output file is not existed, create it")]
 #[command(gen <file>, "generate hash of file")]
 fn gen(file: String, cli: Cli) {
     let force = cli.has("force");
-    let display = cli.get_or("display", false);
+    let no_display = cli.has("no-display");
     let output = cli.get_or("output", String::from("./"));
     let length = cli.get_or("length", 32);
     let path: &Path = file.as_ref();
@@ -37,14 +36,13 @@ fn gen(file: String, cli: Cli) {
     md5 = format!("{:?}", compute(content));
     md5.truncate(length);
 
-    if display {
+    if !no_display {
         println!("MD5 is {}", md5);
     }
 
     write_file(output.as_ref(), md5, force);
 
 }
-
 
 #[command(cmp <A_file> <B_hash>, "compare A with B. A is file, B is hash")]
 fn cmp(file: String, hash: String, cli: Cli) {

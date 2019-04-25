@@ -48,7 +48,7 @@ impl Debug for Command {
             let used_space = lens.pop().unwrap_or_default();
             let arg_format = opt.arg.as_ref().map_or(String::new(), |a| format!("{:?}", a));
 
-            write!(f, "  {}", format!("-{}, --{} {} {}", opt.short, opt.long, arg_format, " ".repeat(max_len - used_space)))?;
+            write!(f, "  {}", format!("-{}, --{} {} {}", opt.short, opt.long.replace("_", "-"), arg_format, " ".repeat(max_len - used_space)))?;
             write!(f, "  {}\n", opt.desc.clone().unwrap_or_default())?;
         }
 
@@ -90,7 +90,7 @@ impl Debug for Application {
             let used_space = lens.pop().unwrap_or_default();
             let arg_format = opt.arg.as_ref().map_or(String::new(), |a| format!("{:?}", a));
 
-            write!(f, "  {}", format!("-{}, --{} {} {}", opt.short, opt.long, arg_format, " ".repeat(max_len - used_space)))?;
+            write!(f, "  {}", format!("-{}, --{} {} {}", opt.short, opt.long.replace("_", "-"), arg_format, " ".repeat(max_len - used_space)))?;
             write!(f, "  {}\n", opt.desc.clone().unwrap_or_default())?;
         }
 

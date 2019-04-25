@@ -353,7 +353,7 @@ impl Cli {
                         if !cmd.has(&matched.long) {
                             let raw = Raw::divide_opt(ins, &matched.arg);
 
-                            global_raws.insert(matched.long.clone(), raw.clone());
+                            global_raws.insert(matched.long.replace("_", "-"), raw.clone());
                             global_raws.insert(matched.short.clone(), raw);
                         }
                     }
@@ -365,7 +365,7 @@ impl Cli {
                     if let Some(matched) = matched {
                         let raw = Raw::divide_opt(ins, &matched.arg);
 
-                        global_raws.insert(matched.long.clone(), raw.clone());
+                        global_raws.insert(matched.long.replace("_", "-"), raw.clone());
                         global_raws.insert(matched.short.clone(), raw);
                     }
                 }
@@ -464,7 +464,7 @@ impl Cmd {
                     if let Some(matched) = matched {
                         let raw = Raw::divide_opt(ins, &matched.arg);
 
-                        result.insert(matched.long.clone(), raw.clone());
+                        result.insert(matched.long.replace("_", "-"), raw.clone());
                         result.insert(matched.short.clone(), raw);
 
                     }
@@ -533,7 +533,7 @@ pub fn normalize(args: Vec<String>) -> Vec<Instance> {
                 all_opts.retain(|x| !x.is_empty());
 
                 instances.push(Instance {
-                    name: String::from(reg.groups[0]),
+                    name: reg.groups[0].replace("-", "_"),
                     args: all_opts.into_iter().map(|x| String::from(x)).collect(),
                 });
             },
@@ -560,7 +560,7 @@ pub fn normalize(args: Vec<String>) -> Vec<Instance> {
                     instances.push(head);
                 }
 
-                head = Instance::new(reg.groups[0]);
+                head = Instance::new(&reg.groups[0].replace("-", "_"));
             },
             PatternType::Word if idx == 0 => {
                 head = Instance::new(&arg);
