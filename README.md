@@ -131,11 +131,17 @@ I can't ensure that it will work perfectly in all cases.
 My abilities are very limited, testing is not my skill and be sorry about that.
 I'm learning it. So if you find any BUG, please tell me. Thanks.
 
-# full example
+# examples
 
-I offered a full example, it's `hash`.
-It's using for generating MD5 of files or strings.
-See `./examples/`for more details.
+I offered two examples in './examples'.
+One is `hash`, the other one is `cargo-bp`.
+
+`hash` is using for generating MD5 of file and compare a file with giving hash.
+
+`cargo-bp` is using for bump versions like `npm version`. 
+It can update one package or update more than one package according to the giving `list file`. 
+`list file` is same as `.gitignore`, all package in it will be updated. But I default set rules.
+It based on `git` and `git flow`. If your branch is at `release`
 
 # homepage
 
