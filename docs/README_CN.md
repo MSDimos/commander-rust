@@ -71,23 +71,24 @@ use commander_rust::{ Cli, command, option, entry, run };
 #[option(-r, --recursive, "recursively")]
 #[command(rmdir <dir> [otherDirs...], "remove files and directories")]
 fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
-    // 如果编译器无法给出正确有效的错误提示
-    // 考虑使用一个_rmdir函数去包裹以下所有代码，
-    // 然后在这里调用它即可。
-    // 参考这个issue：`https://github.com/dtolnay/syn/issues/622`
+    // 从0参数的option获取值，使用`has`
+    // 从普通的option获取值，用`get`, `get_or`, `get_or_else`
+    // `get_or`, `get_or_else`用于提供默认值
+    // 绝大多数情况下，`get_or`和`has`是最好的选择
     let format = cli.get_or("format", String::new("%s"));
     
-    if cli.has("recursive") {
-        let silently: bool = cli.get_or("silently", false);
+    if !cli.has("recursive") {
+        let silently = cli.get_or("silently", false);
         
         if silently {
-            // delete all files silently 
+            // delete all files silently
             // just like `rm -rf /`
         } else {
             // tell the world I'm going to delete the files
         }
     } else {
-        // drink a cup of coffee, relax.
+        // delete files recursively is slowly
+        // so drink a cup of coffee, relax.
     }
 }
 
@@ -125,9 +126,8 @@ description = "Using for test"
 
 # 完整的例子
 
-我提供了一个完整的例子用于展示`commander-rust`如何使用。
-这个例子名为`hash`，他用于计算文件或字符串的MD5摘要。
-查看`./examples/`以获得更多信息。
+两个例子。
+[cargo-bp](https://github.com/MSDimos/cargo-bp) 和 [hash](https://github.com/MSDimos/hash)。
 
 # 主页
 

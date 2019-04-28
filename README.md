@@ -76,14 +76,14 @@ use commander_rust::{ Cli, command, option, entry, run };
 #[option(-r, --recursive, "recursively")]
 #[command(rmdir <dir> [otherDirs...], "remove files and directories")]
 fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
-    // If compiler can't give U valid error information,
-    // Consider using a _rmdir function to wrap all of the following code
-    // and then call it here.
-    // See this issue：`https://github.com/dtolnay/syn/issues/622`
-    
+
+    // get value of no-parameter options, using `has`
+    // get value if normal options, using `get`, `get_or`, `get_or_else`
+    // `get_or` and `get_or_else` can be using for specifying default value 
+    // for the most time, I suggest you using `get_or` and `has`.
     let format = cli.get_or("format", String::new("%s"));
     
-    if cli.has("recursive") {
+    if !cli.has("recursive") {
         let silently = cli.get_or("silently", false);
         
         if silently {
@@ -93,7 +93,8 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
             // tell the world I'm going to delete the files
         }
     } else {
-        // drink a cup of coffee, relax.
+        // delete files recursively is slowly
+        // so drink a cup of coffee, relax.
     }
 }
 
@@ -133,15 +134,8 @@ I'm learning it. So if you find any BUG, please tell me. Thanks.
 
 # examples
 
-I offered two examples in './examples'.
-One is `hash`, the other one is `cargo-bp`.
-
-`hash` is using for generating MD5 of file and compare a file with giving hash.
-
-`cargo-bp` is using for bump versions like `npm version`. 
-It can update one package or update more than one package according to the giving `list file`. 
-`list file` is same as `.gitignore`, all package in it will be updated. But I default set rules.
-It based on `git` and `git flow`. If your branch is at `release`
+Two examples here. 
+One is [cargo-bp](https://github.com/MSDimos/cargo-bp) and the other one is [hash](https://github.com/MSDimos/hash).
 
 # homepage
 
