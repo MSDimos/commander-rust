@@ -14,7 +14,8 @@ categories = ["command-line-interface"]
 exclude = [
     "homepage/",
     "examples/",
-    "docs/"
+    "docs/",
+    "crates/"
 ]
 
 [dependencies.commander-core]
