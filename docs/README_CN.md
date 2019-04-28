@@ -93,7 +93,7 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
 }
 
 // 定义在这里的options是公共的，定义在`#[command]`之上的则是私有的。
-#[option(-s, --silently <silently_or_not>, "dont display anything")]
+#[option(-s, --silently <silently>, "dont display anything")]
 #[entry]
 fn main() {
      // 调用run！()，开始运行

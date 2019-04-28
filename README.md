@@ -99,7 +99,7 @@ fn rmdir(dir: String, other_dirs: Option<Vec<String>>, cli: Cli) {
 }
 
 // options here are public, options above `#[command]` are private
-#[option(-s, --silently <quite_or_not>, "don't display anything")]
+#[option(-s, --silently <silently>, "don't display anything")]
 #[entry]
 fn main() {
      // Run it now!!!!!
