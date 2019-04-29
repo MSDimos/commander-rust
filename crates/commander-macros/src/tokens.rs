@@ -84,7 +84,6 @@ impl Parse for CommandToken {
         let name = tokens.parse()?;
         let mut args = vec![];
         let mut desc = None;
-        let cmd_token: CommandToken;
 
         while !tokens.is_empty() {
             let lookhead = tokens.lookahead1();

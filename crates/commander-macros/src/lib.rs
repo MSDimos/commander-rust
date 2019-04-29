@@ -209,13 +209,6 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
     let mut error_info = TokenStream2::new();
     let mut all_opts = OPTIONS.lock().unwrap();
 
-    if opts.contains_key(&name) {
-        if let Some(v) = opts.get_mut(&name) {
-            v.push(opt_name);
-        }
-    } else {
-        opts.insert(name, vec![opt_name]);
-    }
 
     // check if options are duplicate definition
     if all_opts.contains(&format!("{}", option.short)) {
@@ -225,17 +218,33 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
     } else {
         all_opts.push(format!("{}", option.short));
         all_opts.push(format!("{}", option.long));
+
+        if opts.contains_key(&name) {
+            if let Some(v) = opts.get_mut(&name) {
+                v.push(opt_name);
+            }
+        } else {
+            opts.insert(name, vec![opt_name]);
+        }
     }
 
-    TokenStream::from(quote! {
-        #error_info
+    if error_info.is_empty() {
+        TokenStream::from(quote! {
+            #error_info
 
-        fn #get_fn() -> #opt_token {
-            #option
-        }
+            fn #get_fn() -> #opt_token {
+                #option
+            }
 
-        #method
-    })
+            #method
+        })
+    } else {
+        TokenStream::from(quote! {
+            #error_info
+
+            #method
+        })
+    }
 
 }
 
