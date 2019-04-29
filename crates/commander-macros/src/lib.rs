@@ -7,6 +7,7 @@ mod tools;
 extern crate proc_macro;
 
 use proc_macro::{ TokenStream };
+use proc_macro2::{ TokenStream as TokenStream2 };
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
@@ -14,8 +15,9 @@ use quote::quote;
 use syn::{ Ident, ItemFn, parse_macro_input };
 use tokens::{ CommandToken, OptionsToken};
 
-use crate::errors::{error, DON_NOT_MATCH, ENTRY_ONLY_MAIN, NO_SUB_CMD_NAMES_MAIN, OPT_DUPLICATE_DEFINITION, error_nt};
+use crate::errors::{DON_NOT_MATCH, ENTRY_ONLY_MAIN, NO_SUB_CMD_NAMES_MAIN, OPT_DUPLICATE_DEFINITION, compile_error_info};
 use crate::tools::generate_call_fn;
+use crate::tokens::{PureArguments, check_arguments};
 
 macro_rules! prefix {
     ($($i: tt),*) => {
@@ -78,6 +80,7 @@ macro_rules! import {
 
 lazy_static! {
     static ref COMMAND_OPTIONS: std::sync::Mutex<HashMap<String, Vec<String>>> = std::sync::Mutex::new(HashMap::new());
+    static ref OPTIONS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(vec![]);
     static ref GET_FN_NAMES: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(vec![]);
 }
 
@@ -109,6 +112,8 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     let mut get_fn_names = GET_FN_NAMES.lock().unwrap();
     let mut get_fns = vec![];
 
+    // clear all options in OPTIONS
+    OPTIONS.lock().unwrap().clear();
 
     if let Some(v) = opts.get(&name) {
         for i in v {
@@ -124,40 +129,51 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     // generating call function， because we can't call unstable (uncertain quantity parameters) function
     let call_fn_name = Ident::new(&prefix!(name, "call"), ident.span());
     let call_fn = generate_call_fn(&decl.inputs, &call_fn_name, &ident);
+    let mut error_info = check_arguments(&command.args);
 
-    if format!("{}", command.name) != name {
-        error(DON_NOT_MATCH, &format!("{}", command.name));
+    if format!("{}", command.name) != "main" && format!("{}", command.name) != name {
+        error_info = compile_error_info(command.name.span(), DON_NOT_MATCH);
     }
 
     if name == "main" {
-        error_nt(NO_SUB_CMD_NAMES_MAIN);
+        error_info = compile_error_info(ident.span(), NO_SUB_CMD_NAMES_MAIN)
     }
 
-    command.check();
+    if format!("{}", command.name) == "main" {
+        TokenStream::from(quote! {
+            #error_info
 
-    TokenStream::from(quote! {
-        fn #get_fn() -> #cmd_token {
-            let mut command = #command;
-            let mut fns = CALL_FNS.lock().unwrap();
+            fn #get_fn() -> #cmd_token {
 
-            if !fns.contains_key(#name) {
-                fns.insert(String::from(#name), #call_fn_name);
+            }
+        })
+    } else {
+        TokenStream::from(quote! {
+            #error_info
+
+            fn #get_fn() -> #cmd_token {
+                let mut command = #command;
+                let mut fns = CALL_FNS.lock().unwrap();
+
+                if !fns.contains_key(#name) {
+                    fns.insert(String::from(#name), #call_fn_name);
+                }
+
+                command.opts = {
+                    let mut v = vec![];
+                    #(
+                        v.push(#get_fns());
+                    )*
+                    v
+                };
+                command
             }
 
-            command.opts = {
-                let mut v = vec![];
-                #(
-                    v.push(#get_fns());
-                )*
-                v
-            };
-            command
-        }
+            #call_fn
 
-        #call_fn
-
-        #method
-    })
+            #method
+        })
+    }
 }
 
 
@@ -190,20 +206,30 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
     let get_fn = Ident::new(&fn_name, option.long.span());
     let opt_token = Ident::new(&options_ident!(), ident.span());
     let mut opts = COMMAND_OPTIONS.lock().unwrap();
+    let mut error_info = TokenStream2::new();
+    let mut all_opts = OPTIONS.lock().unwrap();
 
     if opts.contains_key(&name) {
         if let Some(v) = opts.get_mut(&name) {
-            if v.contains(&opt_name) {
-                error(OPT_DUPLICATE_DEFINITION, &opt_name);
-            } else {
-                v.push(opt_name);
-            }
+            v.push(opt_name);
         }
     } else {
         opts.insert(name, vec![opt_name]);
     }
 
+    // check if options are duplicate definition
+    if all_opts.contains(&format!("{}", option.short)) {
+        error_info = compile_error_info(option.short.span(), OPT_DUPLICATE_DEFINITION);
+    } else if all_opts.contains(&format!("{}", option.long)) {
+        error_info = compile_error_info(option.long.span(), OPT_DUPLICATE_DEFINITION);
+    } else {
+        all_opts.push(format!("{}", option.short));
+        all_opts.push(format!("{}", option.long));
+    }
+
     TokenStream::from(quote! {
+        #error_info
+
         fn #get_fn() -> #opt_token {
             #option
         }
@@ -212,7 +238,6 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
     })
 
 }
-
 
 /// Define entry of CLI.
 ///
@@ -224,7 +249,8 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
 /// In other word, you can regard `#[entry]` as `#[command]` without parameters.
 ///
 #[proc_macro_attribute]
-pub fn entry(_: TokenStream, main: TokenStream) -> TokenStream {
+pub fn entry(pure_arguments: TokenStream, main: TokenStream) -> TokenStream {
+    let pure_args: PureArguments = parse_macro_input!(pure_arguments as PureArguments);
     let main: ItemFn = parse_macro_input!(main as ItemFn);
     let ItemFn {
         ident,
@@ -249,10 +275,11 @@ pub fn entry(_: TokenStream, main: TokenStream) -> TokenStream {
     let get_fn_names = GET_FN_NAMES.lock().unwrap();
     let mut get_cmds_fns = vec![];
     let mut get_opts_fns = vec![];
+    let mut error_info = check_arguments(&pure_args.0);
 
     // init can be used with fn main only
     if target != String::from("main") {
-        error_nt(ENTRY_ONLY_MAIN);
+        error_info = compile_error_info(ident.span(), ENTRY_ONLY_MAIN);
     }
 
     if let Some(v) = opts.get("main") {
@@ -266,6 +293,7 @@ pub fn entry(_: TokenStream, main: TokenStream) -> TokenStream {
     }
 
     TokenStream::from(quote! {
+        #error_info
         mod _commander_rust_Inner {
             use crate::_commander_rust_ls;
             use crate::_commander_rust_Raw;
@@ -328,43 +356,39 @@ pub fn run(_: TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         {
             let mut app = _commander_rust_main();
-            let ins = _commander_rust_normalize(std::env::args().into_iter().collect::<Vec<String>>());
+            let ins;
 
             app.derive();
+            ins = _commander_rust_normalize(std::env::args().into_iter().collect::<Vec<String>>(), &app);
 
             let cli = _commander_rust_Cli::from(&ins, &app);
             let fns = CALL_FNS.lock().unwrap();
 
             if let Some(cli) = cli {
-                if let Some(f) = fns.get(&cli.get_name()) {
-                    if cli.has("help") || cli.has("h") {
-                        if cli.cmd.is_some() {
-                            let mut showed = false;
-
-                            for cmd in &app.cmds {
-                                if cmd.name == cli.get_name() {
-                                    println!("{:#?}", cmd);
-                                    showed = true;
-                                    break;
-                                }
+                if cli.has("help") || cli.has("h") {
+                    // display sub-command usage
+                    if cli.cmd.is_some() {
+                        for cmd in &app.cmds {
+                            if cmd.name == cli.get_name() {
+                                println!("{:#?}", cmd);
+                                break;
                             }
-
-                            if !showed {
-                                println!("{:#?}", app);
-                            }
-                        } else {
-                            println!("{:#?}", app);
                         }
-                    } else if cli.has("version") || cli.has("V") {
-                        println!("version: {}", VERSION);
                     } else {
-                        f(&cli.get_raws(), cli);
+                        // display cli usage
+                        println!("{:#?}", app);
                     }
                 } else if cli.has("version") || cli.has("V") {
                     println!("version: {}", VERSION);
                 } else {
-                    println!("{:#?}", app);
+                    if let Some(callback) = fns.get(&cli.get_name()) {
+                        callback(&cli.get_raws(), cli);
+                    } else {
+                        eprintln!("Unknown usage. Using `{} --help` for more help information.\n", APP_NAME);
+                    }
                 }
+            } else {
+                println!("Using `{} --help` for more help information.", APP_NAME);
             }
 
             app

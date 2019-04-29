@@ -42,14 +42,17 @@ impl Debug for Command {
         }
 
         write!(f, "{}\n\n", self.desc.clone().unwrap_or_default())?;
-        write!(f, "Options: \n")?;
 
-        for opt in &self.opts {
-            let used_space = lens.pop().unwrap_or_default();
-            let arg_format = opt.arg.as_ref().map_or(String::new(), |a| format!("{:?}", a));
+        if !self.opts.is_empty() {
+            write!(f, "Private options: \n")?;
 
-            write!(f, "  {}", format!("-{}, --{} {} {}", opt.short, opt.long.replace("_", "-"), arg_format, " ".repeat(max_len - used_space)))?;
-            write!(f, "  {}\n", opt.desc.clone().unwrap_or_default())?;
+            for opt in &self.opts {
+                let used_space = lens.pop().unwrap_or_default();
+                let arg_format = opt.arg.as_ref().map_or(String::new(), |a| format!("{:?}", a));
+
+                write!(f, "  {}", format!("-{}, --{} {} {}", opt.short, opt.long, arg_format, " ".repeat(max_len - used_space)))?;
+                write!(f, "  {}\n", opt.desc.clone().unwrap_or_default())?;
+            }
         }
 
         write!(f, "\n")
@@ -83,50 +86,68 @@ impl Debug for Application {
             write!(f, " [options]")?;
         }
 
+//        if self.args.len() > 0 {
+//            write!(f, " OR {} ", self.name)?;
+//
+//            for arg in self.args.iter() {
+//                write!(f, "{:?} ", arg)?;
+//            }
+//            write!(f, "[options]")?;
+//        }
+
         write!(f, "\n\n{}\n\n", self.desc)?;
-        write!(f, "Global options: \n")?;
 
-        for opt in &self.opts {
-            let used_space = lens.pop().unwrap_or_default();
-            let arg_format = opt.arg.as_ref().map_or(String::new(), |a| format!("{:?}", a));
+        if !self.opts.is_empty() {
+            write!(f, "Public options: \n")?;
 
-            write!(f, "  {}", format!("-{}, --{} {} {}", opt.short, opt.long.replace("_", "-"), arg_format, " ".repeat(max_len - used_space)))?;
-            write!(f, "  {}\n", opt.desc.clone().unwrap_or_default())?;
+            for opt in &self.opts {
+                let used_space = lens.pop().unwrap_or_default();
+                let arg_format = opt.arg.as_ref().map_or(String::new(), |a| format!("{:?}", a));
+
+                write!(f, "  {}", format!("-{}, --{} {} {}", opt.short, opt.long, arg_format, " ".repeat(max_len - used_space)))?;
+                write!(f, "  {}\n", opt.desc.clone().unwrap_or_default())?;
+            }
         }
 
-        write!(f, "\nCommands:\n")?;
-        max_len = 0;
+        if !self.cmds.is_empty() {
+            write!(f, "\nCommands:\n")?;
+            max_len = 0;
 
-        for cmd in &self.cmds {
-            let mut used_space = cmd.name.len() + 13;
+            for cmd in &self.cmds {
+                let mut used_space = cmd.name.len() + 13;
 
-            for arg in &cmd.args {
-                used_space += format!("{:?}", arg).len() + 1;
+                for arg in &cmd.args {
+                    used_space += format!("{:?}", arg).len() + 1;
+                }
+
+                if  used_space > max_len {
+                    max_len = used_space;
+                }
+
+                lens.insert(0, used_space);
             }
 
-            if  used_space > max_len {
-                max_len = used_space;
-            }
+            for cmd in &self.cmds {
+                let used_space = lens.pop().unwrap_or_default();
 
-            lens.insert(0, used_space);
+                write!(f, "  {} ", cmd.name)?;
+
+                for arg in &cmd.args {
+                    write!(f, "{:?} ", arg)?;
+                }
+
+                if cmd.opts.len() > 0 {
+                    write!(f, "[options]")?;
+                }
+
+                write!(f, "{}  {}\n", " ".repeat(max_len - used_space), cmd.desc.clone().unwrap_or_default())?;
+            }
         }
 
-        for cmd in &self.cmds {
-            let used_space = lens.pop().unwrap_or_default();
-
-            write!(f, "  {} ", cmd.name)?;
-
-            for arg in &cmd.args {
-                write!(f, "{:?} ", arg)?;
-            }
-
-            if cmd.opts.len() > 0 {
-                write!(f, "[options]")?;
-            }
-
-            write!(f, "{}  {}\n", " ".repeat(max_len - used_space), cmd.desc.clone().unwrap_or_default())?;
+        if !self.cmds.is_empty() {
+            write!(f, "\nSee '{} <command> --help' for more information on a specific command\n", self.name)
+        } else {
+            write!(f, "\n")
         }
-
-        write!(f, "\nSee '{} <command> --help' for more information on a specific command\n", self.name)
     }
 }

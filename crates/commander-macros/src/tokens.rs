@@ -5,7 +5,8 @@ use syn::parse::{ Parse, ParseStream, Result };
 use quote::{ ToTokens, quote };
 use proc_macro2::{ TokenStream as TokenStream2 };
 
-use crate::errors::{error, ARG_DUPLICATE_DEFINITION, ORDER_ERROR, error_nt};
+use crate::errors::{ARG_DUPLICATE_DEFINITION, ORDER_ERROR, compile_error_info};
+
 
 #[derive(PartialEq, Eq)]
 #[derive(Debug)]
@@ -15,30 +16,6 @@ pub enum ArgumentType {
     OptionalSingle,
     RequiredMultiple,
     OptionalMultiple,
-}
-
-#[derive(Debug)]
-#[doc(hidden)]
-pub struct Argument {
-    pub name: Ident,
-    pub ty: ArgumentType,
-}
-
-#[derive(Debug)]
-#[doc(hidden)]
-pub struct CommandToken {
-    pub name: Ident,
-    pub args: Vec<Argument>,
-    pub desc: Option<LitStr>,
-}
-
-#[derive(Debug)]
-#[doc(hidden)]
-pub struct OptionsToken {
-    pub short: Ident,
-    pub long: Ident,
-    pub arg: Option<Argument>,
-    pub desc: Option<LitStr>,
 }
 
 impl ToTokens for ArgumentType {
@@ -68,6 +45,13 @@ impl ToTokens for ArgumentType {
     }
 }
 
+#[derive(Debug)]
+#[doc(hidden)]
+pub struct Argument {
+    pub name: Ident,
+    pub ty: ArgumentType,
+}
+
 impl ToTokens for Argument {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         let Argument {
@@ -86,39 +70,12 @@ impl ToTokens for Argument {
     }
 }
 
-
-impl CommandToken {
-    pub fn check(&self) {
-        let mut set = HashSet::new();
-        let mut flag = true;
-
-        for (idx, arg) in self.args.iter().enumerate() {
-            let name = format!("{}", arg.name);
-
-            // check duplicate
-            if set.contains(&name) {
-                error(ARG_DUPLICATE_DEFINITION, &name);
-            } else {
-                set.insert(name);
-            }
-            // check order
-            if arg.ty == ArgumentType::RequiredSingle || arg.ty == ArgumentType::RequiredMultiple {
-                if !flag {
-                    error_nt(ORDER_ERROR);
-                }
-            } else {
-                flag = false;
-            }
-
-            // check last argument
-            if idx != self.args.len() - 1 {
-                if arg.ty == ArgumentType::RequiredMultiple || arg.ty == ArgumentType::OptionalMultiple {
-                    error_nt(ORDER_ERROR);
-                }
-            }
-        }
-
-    }
+#[derive(Debug)]
+#[doc(hidden)]
+pub struct CommandToken {
+    pub name: Ident,
+    pub args: Vec<Argument>,
+    pub desc: Option<LitStr>,
 }
 
 // command(rmdir <dir> [otherDirs...], "yes")
@@ -174,13 +131,11 @@ impl Parse for CommandToken {
             desc = tokens.parse()?;
         }
 
-        cmd_token = CommandToken {
+        Ok(CommandToken {
             name,
             args,
             desc,
-        };
-        cmd_token.check();
-        Ok(cmd_token)
+        })
     }
 }
 
@@ -204,13 +159,21 @@ impl ToTokens for CommandToken {
                 name: String::from(#name),
                 args: vec![#( #args ),*],
                 desc: #desc,
-                // 这里保留，因为还要插入options
                 opts: vec![],
             }
         };
 
         expand.to_tokens(tokens);
     }
+}
+
+#[derive(Debug)]
+#[doc(hidden)]
+pub struct OptionsToken {
+    pub short: Ident,
+    pub long: Ident,
+    pub arg: Option<Argument>,
+    pub desc: Option<LitStr>,
 }
 
 // option(-s, --simple <dir>, "Hello world!")
@@ -302,7 +265,7 @@ impl ToTokens for OptionsToken {
             ..
         } = self;
         let short = format!("{}", short);
-        let long = format!("{}", long);
+        let long = format!("{}", long).replace("_", "-");
         let desc = if let Some(litstr) = desc {
             quote! {
                 Some(String::from(#litstr))
@@ -327,4 +290,104 @@ impl ToTokens for OptionsToken {
 
         expand.to_tokens(tokens);
     }
+}
+
+#[derive(Debug)]
+#[doc(hidden)]
+pub struct PureArguments(pub Vec<Argument>);
+
+impl Parse for PureArguments {
+    fn parse(tokens: ParseStream) -> Result<Self> {
+        let mut args = vec![];
+
+        if !tokens.is_empty() {
+            while !tokens.is_empty() {
+                let lookhead = tokens.lookahead1();
+
+                if lookhead.peek(token::Lt) {
+                    // skip <
+                    tokens.parse::<token::Lt>()?;
+                    let name = tokens.parse()?;
+                    let ty= if tokens.peek(token::Dot3) {
+                        tokens.parse::<token::Dot3>()?;
+                        ArgumentType::RequiredMultiple
+                    } else {
+                        ArgumentType::RequiredSingle
+                    };
+
+                    args.push(Argument {
+                        name,
+                        ty,
+                    });
+                    tokens.parse::<token::Gt>()?;
+                } else if lookhead.peek(token::Bracket) {
+                    let content;
+                    bracketed!(content in tokens);
+                    let name = content.parse()?;
+                    let ty = if content.peek(token::Dot3) {
+                        content.parse::<token::Dot3>()?;
+                        ArgumentType::OptionalMultiple
+                    } else {
+                        ArgumentType::OptionalSingle
+                    };
+
+                    args.push(Argument {
+                        name,
+                        ty,
+                    });
+                } else {
+                    lookhead.error();
+                }
+            }
+
+            Ok(PureArguments(args))
+        } else {
+            Ok(PureArguments(args))
+        }
+    }
+}
+
+impl ToTokens for PureArguments {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        let args = &self.0;
+        let expand = quote! {
+            vec![#( #args ),*]
+        };
+
+        expand.to_tokens(tokens);
+    }
+}
+
+pub fn check_arguments(args: &Vec<Argument>) -> TokenStream2 {
+    let mut set = HashSet::new();
+    let mut flag = true;
+
+    for (idx, arg) in args.iter().enumerate() {
+        let name = format!("{}", arg.name);
+
+
+        // check duplicate
+        if set.contains(&name) {
+            return compile_error_info(arg.name.span(), ARG_DUPLICATE_DEFINITION);
+        } else {
+            set.insert(name);
+        }
+        // check order
+        if arg.ty == ArgumentType::RequiredSingle || arg.ty == ArgumentType::RequiredMultiple {
+            if !flag {
+                return compile_error_info(arg.name.span(), ORDER_ERROR);
+            }
+        } else {
+            flag = false;
+        }
+
+        // check last argument
+        if idx != args.len() - 1 {
+            if arg.ty == ArgumentType::RequiredMultiple || arg.ty == ArgumentType::OptionalMultiple {
+                return compile_error_info(arg.name.span(), ORDER_ERROR);
+            }
+        }
+    }
+
+    TokenStream2::new()
 }

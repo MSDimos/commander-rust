@@ -32,6 +32,7 @@ use std::collections::HashMap;
 
 use pattern::{ Pattern, PatternType };
 pub use raw::Raw;
+use std::process::exit;
 
 /// The type of argument.
 ///
@@ -267,6 +268,24 @@ impl Application {
             cmd.derive();
         }
     }
+
+    pub fn contains_key(&self, idx: &str) -> bool {
+        for opt in self.opts.iter() {
+            if opt.long == idx || opt.short == idx {
+                return true;
+            }
+        }
+
+        for cmd in self.cmds.iter() {
+            for opt in cmd.opts.iter() {
+                if opt.long == idx || opt.short == idx {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
 }
 
 impl Command {
@@ -345,27 +364,25 @@ impl Cli {
             let cmd = Cmd::from(instances, &app.cmds);
             let mut global_raws = HashMap::new();
 
-            if let Some(cmd) = &cmd {
-                for ins in instances.iter() {
-                    let matched = app.opts.iter().find(|o| o.long == ins.name || o.short == ins.name);
+            // if sub-command is offered, add options that doesn't exist in this sub-command into global_raws
+            // if it doesn't, all options should belong to the global_raws
+            // both case, options should be checked that if they are defined or not
+            // for using easily, short & long are pushed into global_raws, so does `Cmd`
+            for ins in instances.iter() {
+                let matched = app.opts.iter().find(|o| o.long == ins.name || o.short == ins.name);
 
-                    if let Some(matched) = matched {
+                if let Some(matched) = matched {
+                    if let Some(cmd) = &cmd {
                         if !cmd.has(&matched.long) {
                             let raw = Raw::divide_opt(ins, &matched.arg);
 
-                            global_raws.insert(matched.long.replace("_", "-"), raw.clone());
+                            global_raws.insert(matched.long.clone(), raw.clone());
                             global_raws.insert(matched.short.clone(), raw);
                         }
-                    }
-                }
-            } else {
-                for ins in instances.iter() {
-                    let matched = app.opts.iter().find(|o| (o.long == ins.name || o.short == ins.name));
-
-                    if let Some(matched) = matched {
+                    } else {
                         let raw = Raw::divide_opt(ins, &matched.arg);
 
-                        global_raws.insert(matched.long.replace("_", "-"), raw.clone());
+                        global_raws.insert(matched.long.clone(), raw.clone());
                         global_raws.insert(matched.short.clone(), raw);
                     }
                 }
@@ -430,6 +447,16 @@ impl Cmd {
         raws.into_iter().for_each(|r| self.push(r));
     }
 
+    fn get_cmd_idx(instances: &Vec<Instance>, commands: &Vec<Command>) -> Option<usize> {
+        for (idx, ins) in instances.iter().enumerate() {
+            if commands.iter().any(|c| c.name == ins.name) {
+                return Some(idx);
+            }
+        }
+
+        None
+    }
+
     /// Check user input a option or not. Used by `Cli::has`.
     ///
     /// Dont use it.
@@ -438,7 +465,7 @@ impl Cmd {
         self.opt_raws.contains_key(idx)
     }
 
-    /// Inner function, dont use it.
+    /// Inner function, don't use it.
     #[doc(hidden)]
     pub fn from(instances: &Vec<Instance>, commands: &Vec<Command>) -> Option<Cmd> {
         let mut result = Cmd::new(String::new());
@@ -446,7 +473,17 @@ impl Cmd {
         if instances.is_empty() {
             None
         } else {
-            let head = instances.get(0).unwrap();
+            let idx = Cmd::get_cmd_idx(instances, commands);
+            let head;
+            let n;
+
+            if let Some(idx) = idx {
+                head = instances.get(idx).unwrap();
+                n = idx + 1;
+            } else {
+                return None;
+            }
+
             let cmd = commands.iter().find(|c| c.name == head.name);
 
             // user calls sub-command or not
@@ -458,15 +495,14 @@ impl Cmd {
                 result.append(raws);
 
                 // get all raws of all options
-                for ins in instances.iter().skip(1) {
+                for ins in instances.iter().skip(n) {
                     let matched = sub_cmd.opts.iter().find(|o| (o.long == ins.name || o.short == ins.name));
 
                     if let Some(matched) = matched {
                         let raw = Raw::divide_opt(ins, &matched.arg);
 
-                        result.insert(matched.long.replace("_", "-"), raw.clone());
+                        result.insert(matched.long.clone(), raw.clone());
                         result.insert(matched.short.clone(), raw);
-
                     }
                 }
 
@@ -512,30 +548,36 @@ impl Instance {
     }
 }
 
-pub fn normalize(args: Vec<String>) -> Vec<Instance> {
+pub fn normalize(args: Vec<String>, app: &Application) -> Vec<Instance> {
     let mut instances = vec![];
     let mut head = Instance::empty();
-    let mut args = args.into_iter().skip(1).enumerate();
+    let mut args = args.into_iter().skip(1);
+    let mut flag = false;
 
-    while let Some((idx, arg)) = args.next() {
+    while let Some(arg) = args.next() {
         let reg = Pattern::match_str(&arg);
 
         match reg.ty {
             PatternType::Stmt => {
-                let mut all_opts: Vec<&str> = reg.groups[1].split_terminator(" ").collect();
+                if app.contains_key(reg.groups[0]) {
+                    let mut all_opts: Vec<&str> = reg.groups[1].split_terminator(" ").collect();
 
-                if !head.is_empty() {
-                    instances.push(head);
+                    if !head.is_empty() || (!head.args.is_empty() && instances.is_empty()) {
+                        instances.push(head);
+                    }
+
+                    head = Instance::empty();
+                    all_opts.dedup_by(|a, b| a == b);
+                    all_opts.retain(|x| !x.is_empty());
+
+                    instances.push(Instance {
+                        name: String::from(reg.groups[0]),
+                        args: all_opts.into_iter().map(|x| String::from(x)).collect(),
+                    });
+                } else {
+                    eprintln!("Unknown option: --{}", reg.groups[0]);
+                    exit(-1);
                 }
-
-                head = Instance::empty();
-                all_opts.dedup_by(|a, b| a == b);
-                all_opts.retain(|x| !x.is_empty());
-
-                instances.push(Instance {
-                    name: reg.groups[0].replace("-", "_"),
-                    args: all_opts.into_iter().map(|x| String::from(x)).collect(),
-                });
             },
             PatternType::Short => {
                 let mut all_opts: Vec<&str> = reg.groups[0].split("").collect();
@@ -543,27 +585,46 @@ pub fn normalize(args: Vec<String>) -> Vec<Instance> {
                 all_opts.dedup_by(|a, b| a == b);
                 all_opts.retain(|x| !x.is_empty());
 
-                if !head.is_empty() {
+                if !head.is_empty() || (!head.args.is_empty() && instances.is_empty()) {
                     instances.push(head);
                 }
 
                 for x in all_opts.into_iter() {
                     if x.len() == 1 {
-                        instances.push(Instance::new(x));
+                        if app.contains_key(x) {
+                            instances.push(Instance::new(x));
+                        } else {
+                            eprintln!("Unknown option: -{}", x);
+                            exit(-1);
+                        }
                     }
                 }
 
                 head = instances.pop().unwrap_or(Instance::empty());
             },
             PatternType::Long => {
-                if !head.is_empty() {
-                    instances.push(head);
-                }
+                if app.contains_key(reg.groups[0]) {
+                    if !head.is_empty() || (!head.args.is_empty() && instances.is_empty()) {
+                        instances.push(head);
+                    }
 
-                head = Instance::new(&reg.groups[0].replace("-", "_"));
+                    head = Instance::new(reg.groups[0]);
+                } else {
+                    eprintln!("Unknown option: --{}", reg.groups[0]);
+                    exit(-1);
+                }
             },
-            PatternType::Word if idx == 0 => {
-                head = Instance::new(&arg);
+            PatternType::Word => {
+                if app.cmds.iter().any(|c| c.name == arg) && !flag {
+                    if !head.is_empty() || (!head.args.is_empty() && instances.is_empty()) {
+                        instances.push(head);
+                    }
+
+                    head = Instance::new(&arg);
+                    flag = true;
+                } else {
+                    head.args.push(arg);
+                }
             },
             _ => {
                 head.args.push(arg);
@@ -571,7 +632,7 @@ pub fn normalize(args: Vec<String>) -> Vec<Instance> {
         }
     }
 
-    if !head.is_empty() {
+    if !head.is_empty() || (!head.args.is_empty() && instances.is_empty()) {
         instances.push(head);
     }
 

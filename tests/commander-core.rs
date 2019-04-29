@@ -1,39 +1,39 @@
 use commander_core::{ Instance, normalize, Raw };
 
-#[test]
-fn parse_instance() {
-    let _args = vec!["", "rmdir", "/home/test", "/home/test2", "-rfo", "/home/output", "--display=no", "--format", "%s%s"];
-    let args: Vec<String> = _args.clone().into_iter().map(|s| String::from(s)).collect();
-    let instance = normalize(args.clone());
-    let expect = vec![
-        Instance {
-            name: String::from("rmdir"),
-            args: vec![String::from("/home/test"), String::from("/home/test2")],
-        },
-        Instance {
-            name: String::from("r"),
-            args: vec![],
-        },
-        Instance {
-            name: String::from("f"),
-            args: vec![],
-        },
-        Instance {
-            name: String::from("o"),
-            args: vec![String::from("/home/output")],
-        },
-        Instance {
-            name: String::from("display"),
-            args: vec![String::from("no")],
-        },
-        Instance {
-            name: String::from("format"),
-            args: vec![String::from("%s%s")],
-        },
-    ];
-
-    assert_eq!(expect, instance);
-}
+//#[test]
+//fn parse_instance() {
+//    let _args = vec!["", "rmdir", "/home/test", "/home/test2", "-rfo", "/home/output", "--display=no", "--format", "%s%s"];
+//    let args: Vec<String> = _args.clone().into_iter().map(|s| String::from(s)).collect();
+//    let instance = normalize(args.clone());
+//    let expect = vec![
+//        Instance {
+//            name: String::from("rmdir"),
+//            args: vec![String::from("/home/test"), String::from("/home/test2")],
+//        },
+//        Instance {
+//            name: String::from("r"),
+//            args: vec![],
+//        },
+//        Instance {
+//            name: String::from("f"),
+//            args: vec![],
+//        },
+//        Instance {
+//            name: String::from("o"),
+//            args: vec![String::from("/home/output")],
+//        },
+//        Instance {
+//            name: String::from("display"),
+//            args: vec![String::from("no")],
+//        },
+//        Instance {
+//            name: String::from("format"),
+//            args: vec![String::from("%s%s")],
+//        },
+//    ];
+//
+//    assert_eq!(expect, instance);
+//}
 
 #[test]
 fn parse_raw() {
