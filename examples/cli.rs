@@ -5,12 +5,14 @@ use core::borrow::BorrowMut;
 
 #[option(-c, --cn, "Chinese")]
 #[option(-e, --en, "English")]
-#[option(-j, --jp, "English")]
+#[option(-j, --jp, "Japanese")]
 #[option(-r, --ru, "Russian")]
 #[option(-f, --fr, "French")]
 #[option(-n, --name <name>, "Who I am?")]
 #[command(hello, "Say hello")]
 fn hello(cli: Cli) {
+    let who =  cli.get_or("name", String::from("Double Dimos"));
+
     if cli.has("cn") {
         println!("你好，世界");
     } else if cli.has("en") {
@@ -22,12 +24,9 @@ fn hello(cli: Cli) {
     } else if cli.has("fr") {
         println!("Salut, le monde.");
     }
-
     if cli.has("peace") || !cli.has("peace") {
         println!("Whether the world is peaceful or not, I still love peace.")
     }
-
-    let who =  cli.get_or("name", String::from("Double Dimos"));
 
     println!("I am {} ❤", who);
 }

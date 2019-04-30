@@ -1,8 +1,8 @@
-<center>
-	<img src="docs/example.jpg" width="720" />
+<p align="center">
+	<img src="docs/example.png" width="400" />
     <br />
-    <h5>snippet</h5>
-</center>
+    <p align="center">snippet</p>
+</p>
 
 
 # other languages

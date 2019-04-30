@@ -1,4 +1,9 @@
-![example](example.png)
+<p align="center">
+	<img src="docs/example.png" width="400" />
+    <br />
+    <p align="center">snippet</p>
+</p>
+
 
 # 为什么会有这个项目？
 
