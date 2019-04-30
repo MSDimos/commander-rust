@@ -1,4 +1,9 @@
-![example](docs/example.png)
+<center>
+	<img src="docs/example.jpg" width="720" />
+    <br />
+    <h5>snippet</h5>
+</center>
+
 
 # other languages
 [中文文档](https://github.com/MSDimos/commander-rust/blob/master/docs/README_CN.md)
@@ -155,7 +160,7 @@ Now, if you input `[pkg-name] 1 2 3`, cli will print `hello! 1 2`.
 So it allows you that don't need to define a sub-command anymore in some simple situations. 
 `direct` is supported by only `1.2.x` or higher. 
 `direct` can work together with sub-command well, you can use them both together.
-  
+
 # error
 
 I can't ensure that it will work perfectly in all cases.
