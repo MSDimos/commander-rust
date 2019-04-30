@@ -1,3 +1,5 @@
+![example](docs/example.png)
+
 # other languages
 [中文文档](https://github.com/MSDimos/commander-rust/blob/master/docs/README_CN.md)
 
@@ -126,6 +128,34 @@ version = "0.1.0"
 description = "Using for test"
 ```
 
+# direct
+
+If you don't want to define a sub-command, you can use `#[direct]`.
+What's `direct`? In some situations, for instance, 
+if you want to develop a CLI which could be called like `rm ./* -rf`. 
+If there is no `direct`. you can only use sub-command, it looks like `rm delete ./* -rf`.
+Come on! `delete` is redundant, we don't like this! It should be `rm -rf ./*` instead of `rm delete ./* -rf`.
+So, it's time to use `#[direct]`.
+
+```rust
+/* 
+    You can still define sub-command here
+    suc-command can work together with direct-func well
+ */
+
+// function name is whatever you like
+// last parameter can be `CLI`, it's not necessary like `command`.
+// `cli` can only get public options here.
+#[direct(<a> <b> [c] [d])]
+fn whatever_you_like(a: String, b: String, cli: Cli) {
+    println!("hello! {} {}", a, b);
+}
+```
+Now, if you input `[pkg-name] 1 2 3`, cli will print `hello! 1 2`.
+So it allows you that don't need to define a sub-command anymore in some simple situations. 
+`direct` is supported by only `1.2.x` or higher. 
+`direct` can work together with sub-command well, you can use them both together.
+  
 # error
 
 I can't ensure that it will work perfectly in all cases.
@@ -134,8 +164,9 @@ I'm learning it. So if you find any BUG, please tell me. Thanks.
 
 # examples
 
-Two examples here. 
+Two full examples here. 
 One is [cargo-bp](https://github.com/MSDimos/cargo-bp) and the other one is [hash](https://github.com/MSDimos/hash).
+And there is a simple example showing all usage of `commander-rust`, see `./examples` for more information.
 
 # homepage
 
@@ -147,7 +178,6 @@ There are several rules you should follow.
 1. All `#[options]` should defined above `#[command]` and `#[entry]`
 2. DO NOT define options duplicate!!! As a concession, You can define the same option on different command and entry.
 3. Private options are visible to specific sub-commands. Public options are visible to all sub-commands.
-4. At least one sub-command!
 
 
 # warn

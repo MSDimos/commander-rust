@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene)]
 
-use commander_rust::{ option, command, Cli, entry, run };
+use commander_rust::{ option, command, Cli, entry, run, direct };
+use core::borrow::BorrowMut;
 
 #[option(-c, --cn, "Chinese")]
 #[option(-e, --en, "English")]
@@ -37,6 +38,17 @@ fn wish(who: String, cli: Cli) {
     if !cli.has("peace") {
         println!("Best wishes to you, from {}", who);
     }
+}
+
+#[direct(<a> <b> [c] [d])]
+fn direct(a: String, b: String, cli: Cli) {
+    let peace = cli.has("peace");
+
+    if peace {
+        println!("It's peace!");
+    }
+
+    println!("hello! {} {}", a, b);
 }
 
 #[option(-p, --peace, "I love peace")]

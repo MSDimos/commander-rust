@@ -96,6 +96,7 @@ pub struct Application {
     pub desc: String,
     pub cmds: Vec<Command>,
     pub opts: Vec<Options>,
+    pub direct_args: Vec<Argument>,
 }
 
 /// Represents a instance defined by `#[command]`.
@@ -236,6 +237,7 @@ pub struct Cmd {
 pub struct Cli {
     pub cmd: Option<Cmd>,
     pub global_raws: HashMap<String, Raw>,
+    pub direct_args: Vec<Raw>,
 }
 
 impl Application {
@@ -310,6 +312,7 @@ impl Cli {
         Cli {
             cmd: None,
             global_raws: HashMap::new(),
+            direct_args: vec![],
         }
     }
 
@@ -391,6 +394,13 @@ impl Cli {
             Some(Cli {
                 cmd,
                 global_raws,
+                direct_args: {
+                    if instances[0].is_empty() && !instances[0].args.is_empty() {
+                        Raw::divide_cmd(&instances[0], &app.direct_args)
+                    } else {
+                        vec![]
+                    }
+                }
             })
         }
     }

@@ -86,14 +86,14 @@ impl Debug for Application {
             write!(f, " [options]")?;
         }
 
-//        if self.args.len() > 0 {
-//            write!(f, " OR {} ", self.name)?;
-//
-//            for arg in self.args.iter() {
-//                write!(f, "{:?} ", arg)?;
-//            }
-//            write!(f, "[options]")?;
-//        }
+        if self.direct_args.len() > 0 {
+            write!(f, " OR {} ", self.name)?;
+
+            for arg in self.direct_args.iter() {
+                write!(f, "{:?} ", arg)?;
+            }
+            write!(f, "[options]")?;
+        }
 
         write!(f, "\n\n{}\n\n", self.desc)?;
 

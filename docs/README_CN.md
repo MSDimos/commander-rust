@@ -1,3 +1,5 @@
+![example](example.png)
+
 # 为什么会有这个项目？
 
 长久以来，在`Rust`中开发CLI程序并不是一件简单的事儿。 
@@ -107,6 +109,27 @@ fn main() {
 
 尝试调用一下`[cli的名字] --help`。
 
+# direct
+如果你不想定义子命令，希望想`rm ./* -rf`一样直接处理，而不是`rm delete ./* -rf`，
+这样有一个多余的`delete`， 这很多余。
+此时，你可以使用`#[direct]`。
+```rust
+/* 
+    You can still define sub-command here
+    suc-command can work together with direct-func well
+ */
+
+// function name is whatever you like
+// last parameter can be `CLI`, it's not necessary like `command`.
+// `cli` can only get public options here.
+#[direct(<a> <b> [c] [d])]
+fn whatever_you_like(a: String, b: String, cli: Cli) {
+    println!("hello! {} {}", a, b);
+}
+```
+此时，如果你输入`[cli的名字] 1 2`,控制台会打印出`hello! 1 2`。这样，你就可以不再使用多余的子命令了。
+子命令和`direct`可以一起工作。只有`1.2.x`或者更高的版本才支持`direct`。
+
 # 版本号&描述&cli名字？
 
 他们都来自于你的项目的`Cargo.toml`里面。
@@ -139,7 +162,6 @@ description = "Using for test"
 1. 所有的`#[option]`都必须定义在`#[command]`或者`#[entry]`的上方！否则不能工作！
 2. 不要重复定义`#[option]`，短命名和长命名都应该保持唯一！作为补偿，你可以定义相同的公共option和私有option。私有option的权重更高。
 3. 私有option仅对对应的子命令可见，公共option对所有的子命令都有效
-4. 不支持0子命令程序。
 
 # 警告
 

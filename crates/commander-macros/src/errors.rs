@@ -12,3 +12,4 @@ pub const ENTRY_ONLY_MAIN: Msg = "#[entry] can be used for fn main only.";
 pub const DON_NOT_MATCH: Msg = "The name of sub-command should be same as the name of it's function.";
 pub const OPT_DUPLICATE_DEFINITION: Msg = "Duplicate definitions of options.";
 pub const NO_SUB_CMD_NAMES_MAIN: Msg = "Sub-command can't be named as [main].";
+pub const DIRECT_ONLY_ONCE: Msg = "Direct-function can be used only once time.";

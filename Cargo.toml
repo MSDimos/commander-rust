@@ -15,7 +15,8 @@ exclude = [
     "homepage/",
     "examples/",
     "docs/",
-    "crates/"
+    "crates/",
+    "example.png",
 ]
 
 [dependencies]
@@ -23,8 +24,8 @@ lazy_static = "1.2.0"
 
 [dependencies.commander-core]
 path = "crates/commander-core"
-version = "1.1.4"
+version = "1.1.6"
 
 [dependencies.commander-macros]
 path = "crates/commander-macros"
-version = "1.1.4"
+version = "1.1.6"
