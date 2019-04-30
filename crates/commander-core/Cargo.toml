@@ -1,6 +1,6 @@
 [package]
 name = "commander-core"
-version = "1.1.4"
+version = "1.1.6"
 authors = ["dimos <doubledimos@outlook.com>"]
 edition = "2018"
 description = "This crate is used by commander-rust only. Please don't use it!"
