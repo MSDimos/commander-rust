@@ -1,5 +1,5 @@
 <p align="center">
-	<img src="docs/example.png" width="400" />
+	<img src="docs/example.png" width="500" />
     <br />
     <p align="center">snippet</p>
 </p>
