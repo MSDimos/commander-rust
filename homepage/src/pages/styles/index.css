@@ -81,3 +81,13 @@
   color: white;
   transform: rotateZ(45deg);
 }
+
+.content {
+  display: none;
+  box-sizing: content-box;
+  padding: 6rem;
+}
+
+.content.show {
+  display: block;
+}

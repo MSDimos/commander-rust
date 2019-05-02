@@ -1,7 +1,6 @@
 #![feature(proc_macro_hygiene)]
 
 use commander_rust::{ option, command, Cli, entry, run, direct };
-use core::borrow::BorrowMut;
 
 #[option(-c, --cn, "Chinese")]
 #[option(-e, --en, "English")]

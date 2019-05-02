@@ -16,17 +16,19 @@ export default function Shutter(props = {
 
   return (
     <div className={expandClass}>
-      <div className='up shutter'>
-        <div className='header'>
-          <h4>commander.rust</h4>
-          <div>
-            <span>A better way to develop the cli</span>
-            <br />
-            <i>inspired by <a target='blank' href='https://github.com/tj/commander.js/'>commander.js</a> & <a target='blank' href='https://rocket.rs/'>rocket.rs</a></i>
+      <div className='shutter-wrap'>
+        <div className='up shutter'>
+          <div className='header'>
+            <h4>commander.rust</h4>
+            <div>
+              <span>A better way to develop the cli</span>
+              <br />
+              <i>inspired by <a target='blank' href='https://github.com/tj/commander.js/'>commander.js</a> & <a target='blank' href='https://rocket.rs/'>rocket.rs</a></i>
+            </div>
           </div>
         </div>
+        <div className='down shutter'></div>
       </div>
-      <div className='down shutter'></div>
 
       <div className={upflowClass}>
         <ProgressiveCodeBlock code={code} />

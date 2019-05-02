@@ -1,28 +1,30 @@
 import React from 'react';
-import Shutter from '../components/shutter';
 import { useState } from 'react';
-
+import doc from "../../public/readme.html";
 import "./styles/index.css";
+import Shades from '../components/shades';
 
 const code = `
 #![feature(proc_macro_hygiene)]
 
-use commander_rust::{command, option, entry, take, Cmd};
+use commander_rust::{option, command, entry, Cli, run};
 
-#[option(-s, --simple [dir], "simplify sth")]
-#[option(-r, --recursive [dir...], "recursively")]
-#[command(rmdir <dir> [otherDirs...], "remove files and directories")]
-fn rmdir(dir: i32, other_dirs: Option<Vec<bool>>, cmd: Cmd) {
-    println!("dir is {}, other_dirs is {:#?}", dir, other_dirs);
+#[option(-c, --cn, "Chinese")]
+#[option(-e, --en, "English")]
+#[option(-j, --jp, "Japanese")]
+#[command(hello, "Say hello")]
+fn hello(cli: Cli) {
+    if cli.has("cn") {
+        println!("你好，世界");
+    } else if cli.has("en") {
+        println!("hello, world!");
+    } else if cli.has("jp") {
+        println!("こんにちは、世界");
+    }
 }
 
-
-#[option(-s, --simple [dir], "simplify sth")]
-#[option(-r, --recursive, "recursively")]
 #[entry]
-fn main() {
-    take![rmdir, copy];
-}
+fn main() { run!(); }
 `;
 
 export default function Index() {
@@ -31,11 +33,13 @@ export default function Index() {
 
   return (
     <React.Fragment>
-      <Shutter expand={state} code={code}>
-        <div>
+      {/* <Shutter expand={state} code={code}>
+        <div dangerouslySetInnerHTML={{
+          __html: doc,
+        }} />
+      </Shutter> */}
+      <Shades expand={state} code={code} content={ doc } />
 
-        </div>
-      </Shutter>
       <div className='next' onClick={() => setState(!state)}>
         <div className='btn'>+</div>
       </div>

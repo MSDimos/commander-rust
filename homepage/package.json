@@ -1,28 +1,37 @@
 {
   "name": "homepage",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "homepage of commander-rust",
+  "main": "src/index.js",
+  "repository": "https://github.com/MSDimos/commander-rust",
+  "author": "Double Dimos",
+  "license": "MIT",
   "dependencies": {
-    "highlight.js": "^9.15.6",
+    "@babel/core": "^7.4.4",
+    "@babel/preset-env": "^7.4.4",
+    "@babel/preset-react": "^7.0.0",
+    "autoprefixer": "^9.5.1",
+    "babel-loader": "^8.0.5",
+    "clean-webpack-plugin": "^2.0.1",
+    "css-loader": "^2.1.1",
+    "extract-text-webpack-plugin": "^4.0.0-beta.0",
+    "file-loader": "^3.0.1",
+    "html-loader": "^0.5.5",
+    "html-webpack-plugin": "^3.2.0",
+    "mini-css-extract-plugin": "^0.6.0",
+    "optimize-css-assets-webpack-plugin": "^5.0.1",
+    "postcss-loader": "^3.0.0",
     "react": "^16.8.6",
-    "react-app-rewired": "^2.1.1",
     "react-dom": "^16.8.6",
     "react-highlight": "^0.12.0",
-    "react-scripts": "2.1.8"
+    "style-loader": "^0.23.1",
+    "terser-webpack-plugin": "^1.2.3",
+    "webpack": "^4.30.0",
+    "webpack-cli": "^3.3.1",
+    "webpack-dev-server": "^3.3.1"
   },
   "scripts": {
-    "start": "react-app-rewired start",
-    "build": "react-app-rewired build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": "react-app"
-  },
-  "browserslist": [
-    ">0.2%",
-    "not dead",
-    "not ie <= 11",
-    "not op_mini all"
-  ]
+    "start": "webpack-dev-server --config ./config/webpack.dev.config.js",
+    "build": "webpack --config ./config/webpack.config.js"
+  }
 }

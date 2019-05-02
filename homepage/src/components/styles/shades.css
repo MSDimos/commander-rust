@@ -1,0 +1,73 @@
+.shades {
+  width: 100vw;
+  overflow: hidden;
+  font-size: 0;
+  z-index: 4;
+}
+.shade:first-child.hide {
+  transform: translateX(-100%) rotateZ(0);
+}
+
+.shade:last-child.hide {
+  transform: translateX(100%) rotateZ(0);
+}
+
+
+.shade {
+  width: 100%;
+  height: 50vh;
+  background: #323742;
+  display: inline-block;
+  margin: 0;
+  font-size: 1rem;
+  transition: all .5s;
+}
+
+.code-block {
+  transition: all 5s;
+  font-size: 1rem;
+  position: absolute;
+  display: inline-block;
+  max-width: 48rem;
+  top: 50%;
+  left: 50%;
+  transform: translate3d(-50%, -50%, 0);
+  border-radius: 0.4rem;
+  padding: 0 1.5rem;
+  background: #282c34;
+  text-align: start;
+  z-index: 5;
+  transition: all 0.5s linear;
+}
+
+.code-block.hide {
+  opacity: 0;
+  transform-origin: center;
+  animation: hide .5s linear;
+  animation-fill-mode: forwards;
+  animation-delay: .5s;
+}
+
+.content {
+  width: 100%;
+  font-size: 1rem;
+  position: absolute;
+  top: 0;
+  padding: 0 4rem;
+  box-sizing: content-box;
+}
+
+
+/* 覆盖markdown默认主题产生的影响 */
+.code-block code {
+  border: none;
+}
+
+@keyframes hide {
+  0% {
+    transform: rotateX(90deg);
+  }
+  100% {
+    transform: rotateX(90deg);
+  }
+}
