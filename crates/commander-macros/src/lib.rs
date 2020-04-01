@@ -428,6 +428,7 @@ pub fn run(_: TokenStream) -> TokenStream {
 
             let cli = _commander_rust_Cli::from(&ins, &app);
             let fns = CALL_FNS.lock().unwrap();
+            let mut out = None;
 
             if let Some(cli) = cli {
                 if cli.has("help") || cli.has("h") {
@@ -447,12 +448,12 @@ pub fn run(_: TokenStream) -> TokenStream {
                     println!("version: {}", VERSION);
                 } else {
                     if let Some(callback) = fns.get(&cli.get_name()) {
-                        return callback(&cli.get_raws(), cli);
+                        out = Some(callback(&cli.get_raws(), cli));
                     } else if !cli.direct_args.is_empty() {
                         let df = *DIRECT_FN.lock().unwrap();
 
                         if let Some(f) = &df {
-                            return f(&cli.direct_args.clone(), cli)
+                            out = Some(f(&cli.direct_args.clone(), cli));
                         } else {
                             println!("ERRRRR");
                         }
@@ -464,7 +465,7 @@ pub fn run(_: TokenStream) -> TokenStream {
                 println!("Using `{} --help` for more help information.", APP_NAME);
             }
 
-            app;
+            (app, out)
         }
     };
     result.into()
