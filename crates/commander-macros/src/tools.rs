@@ -1,8 +1,8 @@
-use syn::punctuated::Punctuated;
-use syn::{ FnArg, Ident };
-use syn::token;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use proc_macro2::{ TokenStream as TokenStream2 };
+use syn::punctuated::Punctuated;
+use syn::token;
+use syn::{ReturnType, FnArg, Ident};
 
 /// Generate inputs of command processing function.
 ///
@@ -10,11 +10,16 @@ use proc_macro2::{ TokenStream as TokenStream2 };
 /// But we need a common way to call it, so we need to generate inputs tokens needed.
 
 #[doc(hidden)]
-pub fn generate_call_fn(inputs: &Punctuated<FnArg, token::Comma>, call_fn_name: &Ident, fn_name: &Ident) -> TokenStream2 {
+pub fn generate_call_fn(
+    inputs: &Punctuated<FnArg, token::Comma>,
+    call_fn_name: &Ident,
+    fn_name: &Ident,
+    ret: &ReturnType,
+) -> TokenStream2 {
     let mut tokens: Vec<TokenStream2> = vec![];
 
     for (idx, arg) in inputs.iter().enumerate() {
-        if let FnArg::Captured(cap) = arg {
+        if let FnArg::Typed( cap) = arg {
             let ty = &cap.ty;
 
             if idx < inputs.len() - 1 {
@@ -49,7 +54,7 @@ pub fn generate_call_fn(inputs: &Punctuated<FnArg, token::Comma>, call_fn_name: 
     }
 
     (quote! {
-        fn #call_fn_name(raws: &Vec<_commander_rust_Raw>, cli: _commander_rust_Cli) {
+        fn #call_fn_name(raws: &Vec<_commander_rust_Raw>, cli: _commander_rust_Cli) #ret {
             #fn_name(#(#tokens,)*)
         }
     }).into()

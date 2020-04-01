@@ -76,11 +76,9 @@ lazy_static! {
 #[proc_macro_attribute]
 pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     let method: ItemFn = parse_macro_input!(method as ItemFn);
-    let ItemFn {
-        ident,
-        decl,
-        ..
-    } = &method;
+    let args = &method.sig.inputs;
+    let ret = &method.sig.output;
+    let ident = &method.sig.ident;
     let name = format!("{}", ident);
     let get_fn = Ident::new(&prefix!(name), ident.span());
     let cmd_token = Ident::new(&prefix!("Command"), ident.span());
@@ -104,7 +102,7 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     let command: CommandToken = parse_macro_input!(cmd as CommandToken);
     // generating call function， because we can't call unstable (uncertain quantity parameters) function
     let call_fn_name = Ident::new(&prefix!(name, "call"), ident.span());
-    let call_fn = generate_call_fn(&decl.inputs, &call_fn_name, &ident);
+    let call_fn = generate_call_fn(&args, &call_fn_name, &ident, &ret);
     let mut error_info = check_arguments(&command.args);
 
     if format!("{}", command.name) != "main" && format!("{}", command.name) != name {
@@ -162,10 +160,7 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
 pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
     let option: OptionsToken = parse_macro_input!(opt as OptionsToken);
     let method: ItemFn = parse_macro_input!(method as ItemFn);
-    let ItemFn {
-        ident,
-        ..
-    } = &method;
+    let ident = &method.sig.ident;
     let name = format!("{}", ident);
     let opt_name = format!("{}", option.long);
     let fn_name = prefix!(name, opt_name);
@@ -236,18 +231,16 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn direct(pure_args: TokenStream, func: TokenStream) -> TokenStream {
     let func: ItemFn = parse_macro_input!(func as ItemFn);
-    let ItemFn {
-        ident,
-        decl,
-        ..
-    } = &func;
+    let ident = &func.sig.ident;
+    let ret = &func.sig.output;
+    let args = &func.sig.inputs;
     let name = format!("{}", ident);
     let pure_args: PureArguments = parse_macro_input!(pure_args as PureArguments);
     let direct_fn: &mut Option<String> = &mut (*DIRECT_NAME.lock().unwrap());
     let direct_get_fn = Ident::new(&prefix!(name), ident.span());
     let argument_ident = Ident::new(&prefix!("Argument"), ident.span());
     let call_fn_name = Ident::new(&prefix!(name, "call"), ident.span());
-    let call_fn = generate_call_fn(&decl.inputs, &call_fn_name, &ident);
+    let call_fn = generate_call_fn(&args, &call_fn_name, &ident, &ret);
     let mut error_info: TokenStream2 = check_arguments(&pure_args.0);
 
 
@@ -286,10 +279,7 @@ pub fn direct(pure_args: TokenStream, func: TokenStream) -> TokenStream {
 pub fn entry(pure_arguments: TokenStream, main: TokenStream) -> TokenStream {
     let pure_args: PureArguments = parse_macro_input!(pure_arguments as PureArguments);
     let main: ItemFn = parse_macro_input!(main as ItemFn);
-    let ItemFn {
-        ident,
-        ..
-    } = &main;
+    let ident = &main.sig.ident;
     let target = format!("{}", ident);
     let opts = COMMAND_OPTIONS.lock().unwrap();
     let imports = vec![
