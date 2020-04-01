@@ -60,7 +60,7 @@ impl Debug for Command {
 }
 
 
-impl Debug for Application {
+impl <Out> Debug for Application<Out> {
     fn fmt(&self, f: &mut Formatter) -> Result {
         let mut max_len = 0;
         let mut lens = vec![];
