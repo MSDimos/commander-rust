@@ -102,7 +102,7 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     let command: CommandToken = parse_macro_input!(cmd as CommandToken);
     // generating call function， because we can't call unstable (uncertain quantity parameters) function
     let call_fn_name = Ident::new(&prefix!(name, "call"), ident.span());
-    let call_fn = generate_call_fn(&args, &call_fn_name, &ident, &ret);
+    let call_fn = generate_call_fn(args, &call_fn_name, ident, ret);
     let mut error_info = check_arguments(&command.args);
 
     if format!("{}", command.name) != "main" && format!("{}", command.name) != name {
@@ -240,7 +240,7 @@ pub fn direct(pure_args: TokenStream, func: TokenStream) -> TokenStream {
     let direct_get_fn = Ident::new(&prefix!(name), ident.span());
     let argument_ident = Ident::new(&prefix!("Argument"), ident.span());
     let call_fn_name = Ident::new(&prefix!(name, "call"), ident.span());
-    let call_fn = generate_call_fn(&args, &call_fn_name, &ident, &ret);
+    let call_fn = generate_call_fn(args, &call_fn_name, ident, ret);
     let mut error_info: TokenStream2 = check_arguments(&pure_args.0);
 
 
