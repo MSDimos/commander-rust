@@ -1,9 +1,9 @@
 #![allow(unused_mut, dead_code)]
 
-use std::fmt::{ Debug, Formatter, Result };
+use std::fmt::{ Formatter, Result, Display };
 use crate::{ Command, Argument, ArgumentType, Application };
 
-impl Debug for Argument {
+impl Display for Argument {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self.ty {
             ArgumentType::RequiredSingle => write!(f, "<{}>", self.name),
@@ -14,14 +14,14 @@ impl Debug for Argument {
     }
 }
 
-impl Debug for Command {
+impl Display for Command {
     fn fmt(&self, f: &mut Formatter) -> Result {
         let mut max_len = 0;
         let mut arg_formats = String::new();
         let mut lens = vec![];
 
         for opt in &self.opts {
-            let arg_len = opt.arg.as_ref().map_or(0, |a| format!("{:?}", a).len());
+            let arg_len = opt.arg.as_ref().map_or(0, |a| format!("{:}", a).len());
             let used_space = opt.long.len() + opt.short.len() + arg_len;
 
             if  used_space > max_len {
@@ -32,7 +32,7 @@ impl Debug for Command {
         }
 
         for arg in &self.args {
-            arg_formats.push_str(&format!("{:?} ", arg));
+            arg_formats.push_str(&format!("{:} ", arg));
         }
 
         if self.opts.len() > 0 {
@@ -48,7 +48,7 @@ impl Debug for Command {
 
             for opt in &self.opts {
                 let used_space = lens.pop().unwrap_or_default();
-                let arg_format = opt.arg.as_ref().map_or(String::new(), |a| format!("{:?}", a));
+                let arg_format = opt.arg.as_ref().map_or(String::new(), |a| format!("{:}", a));
 
                 write!(f, "  {}", format!("-{}, --{} {} {}", opt.short, opt.long, arg_format, " ".repeat(max_len - used_space)))?;
                 write!(f, "  {}\n", opt.desc.clone().unwrap_or_default())?;
@@ -60,13 +60,13 @@ impl Debug for Command {
 }
 
 
-impl Debug for Application {
+impl <Out> Display for Application<Out> {
     fn fmt(&self, f: &mut Formatter) -> Result {
         let mut max_len = 0;
         let mut lens = vec![];
 
         for opt in &self.opts {
-            let arg_len = opt.arg.as_ref().map_or(0, |a| format!("{:?}", a).len());
+            let arg_len = opt.arg.as_ref().map_or(0, |a| format!("{:}", a).len());
             let used_space = opt.long.len() + opt.short.len() + arg_len;
 
             if  used_space > max_len {
@@ -90,19 +90,19 @@ impl Debug for Application {
             write!(f, " OR {} ", self.name)?;
 
             for arg in self.direct_args.iter() {
-                write!(f, "{:?} ", arg)?;
+                write!(f, "{:} ", arg)?;
             }
             write!(f, "[options]")?;
         }
 
-        write!(f, "\n\n{}\n\n", self.desc)?;
+        write!(f, "\n\n{}\n\n", self.description)?;
 
         if !self.opts.is_empty() {
             write!(f, "Public options: \n")?;
 
             for opt in &self.opts {
                 let used_space = lens.pop().unwrap_or_default();
-                let arg_format = opt.arg.as_ref().map_or(String::new(), |a| format!("{:?}", a));
+                let arg_format = opt.arg.as_ref().map_or(String::new(), |a| format!("{:}", a));
 
                 write!(f, "  {}", format!("-{}, --{} {} {}", opt.short, opt.long, arg_format, " ".repeat(max_len - used_space)))?;
                 write!(f, "  {}\n", opt.desc.clone().unwrap_or_default())?;
@@ -117,7 +117,7 @@ impl Debug for Application {
                 let mut used_space = cmd.name.len() + 13;
 
                 for arg in &cmd.args {
-                    used_space += format!("{:?}", arg).len() + 1;
+                    used_space += format!("{:}", arg).len() + 1;
                 }
 
                 if  used_space > max_len {
@@ -133,7 +133,7 @@ impl Debug for Application {
                 write!(f, "  {} ", cmd.name)?;
 
                 for arg in &cmd.args {
-                    write!(f, "{:?} ", arg)?;
+                    write!(f, "{:} ", arg)?;
                 }
 
                 if cmd.opts.len() > 0 {

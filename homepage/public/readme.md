@@ -41,8 +41,8 @@ The difference between them is that `Github` is latest but unstable and `crates.
 ##### install from `Github`
 
 ```toml
-[dependencies.commander_rust]
-git = "https://github.com/MSDimos/commander_rust"
+[dependencies.commander-rust]
+git = "https://github.com/MSDimos/commander-rust"
 branch = "master"
 ```
 
@@ -50,7 +50,7 @@ branch = "master"
 
 ```toml
 [dependencies]
-commander_rust = "1.1.3" # or other version you want to install
+commander-rust = "1.1.3" # or other version you want to install
 ```
 
 #### using it

@@ -12,14 +12,18 @@ use std::collections::HashMap;
 
 use lazy_static::lazy_static;
 use quote::quote;
-use syn::{ Ident, ItemFn, parse_macro_input };
+use syn::{ Ident, ItemFn, parse_macro_input, ReturnType };
 use tokens::{ CommandToken, OptionsToken};
+use std::sync::{Mutex};
 
 use crate::errors::{DON_NOT_MATCH, ENTRY_ONLY_MAIN, NO_SUB_CMD_NAMES_MAIN, OPT_DUPLICATE_DEFINITION, compile_error_info, DIRECT_ONLY_ONCE};
 use crate::tools::generate_call_fn;
 use crate::tokens::{PureArguments, check_arguments};
 use syn::spanned::Spanned;
 
+/// adds _commander_rust prefix to the name e.g.
+/// prefix!("main") -> _commander_rs_main
+/// prefix!("main", "silent") -> _commander_rs_main_silent
 macro_rules! prefix {
     ($($i: tt),*) => {
         {
@@ -40,24 +44,14 @@ macro_rules! prefix {
     }
 }
 
-macro_rules! import {
-    ($o: ident as $r: ident) => {
-        quote! {
-            use commander_rust::{ $o as $r };
-        }
-    };
-    ($o: ident as $r: ident from $f: path) => {
-        quote! {
-            use $f::{ $o as $r };
-        }
-    }
-}
 
 lazy_static! {
-    static ref COMMAND_OPTIONS: std::sync::Mutex<HashMap<String, Vec<String>>> = std::sync::Mutex::new(HashMap::new());
-    static ref OPTIONS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(vec![]);
-    static ref GET_FN_NAMES: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(vec![]);
-    static ref DIRECT_NAME: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+    static ref COMMAND_OPTIONS: Mutex<HashMap<String, Vec<String>>> = Mutex::new(HashMap::new());
+    static ref OPTIONS: Mutex<Vec<String>> = Mutex::new(vec![]);
+
+    // Ever declared command name will is pushed into here (compile time).
+    static ref GET_FN_NAMES: Mutex<Vec<String>> = Mutex::new(vec![]);
+    static ref DIRECT_NAME: Mutex<Option<String>> = Mutex::new(None);
 }
 
 
@@ -76,14 +70,11 @@ lazy_static! {
 #[proc_macro_attribute]
 pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     let method: ItemFn = parse_macro_input!(method as ItemFn);
-    let ItemFn {
-        ident,
-        decl,
-        ..
-    } = &method;
+    let args = &method.sig.inputs;
+    let ret = &method.sig.output;
+    let ident = &method.sig.ident;
     let name = format!("{}", ident);
     let get_fn = Ident::new(&prefix!(name), ident.span());
-    let cmd_token = Ident::new(&prefix!("Command"), ident.span());
     let opts = COMMAND_OPTIONS.lock().unwrap();
     let mut get_fn_names = GET_FN_NAMES.lock().unwrap();
     let mut get_fns = vec![];
@@ -104,7 +95,7 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     let command: CommandToken = parse_macro_input!(cmd as CommandToken);
     // generating call function， because we can't call unstable (uncertain quantity parameters) function
     let call_fn_name = Ident::new(&prefix!(name, "call"), ident.span());
-    let call_fn = generate_call_fn(&decl.inputs, &call_fn_name, &ident);
+    let call_fn = generate_call_fn(args, &call_fn_name, ident, ret);
     let mut error_info = check_arguments(&command.args);
 
     if format!("{}", command.name) != "main" && format!("{}", command.name) != name {
@@ -118,21 +109,12 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         #error_info
 
-        fn #get_fn() -> #cmd_token {
+        fn #get_fn() -> ::commander_rust::Command {
+            COMMANDER.register_command_handler(String::from(#name), #call_fn_name);
+
             let mut command = #command;
-            let mut fns = CALL_FNS.lock().unwrap();
+            command.opts = vec![#(#get_fns(),)*];
 
-            if !fns.contains_key(#name) {
-                fns.insert(String::from(#name), #call_fn_name);
-            }
-
-            command.opts = {
-                let mut v = vec![];
-                #(
-                    v.push(#get_fns());
-                )*
-                v
-            };
             command
         }
 
@@ -162,15 +144,11 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
 pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
     let option: OptionsToken = parse_macro_input!(opt as OptionsToken);
     let method: ItemFn = parse_macro_input!(method as ItemFn);
-    let ItemFn {
-        ident,
-        ..
-    } = &method;
+    let ident = &method.sig.ident;
     let name = format!("{}", ident);
     let opt_name = format!("{}", option.long);
     let fn_name = prefix!(name, opt_name);
     let get_fn = Ident::new(&fn_name, option.long.span());
-    let opt_token = Ident::new(&prefix!("Options"), ident.span());
     let mut opts = COMMAND_OPTIONS.lock().unwrap();
     let mut error_info = TokenStream2::new();
     let mut all_opts = OPTIONS.lock().unwrap();
@@ -198,7 +176,7 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
         TokenStream::from(quote! {
             #error_info
 
-            fn #get_fn() -> #opt_token {
+            fn #get_fn() -> ::commander_rust::Options {
                 #option
             }
 
@@ -236,18 +214,15 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn direct(pure_args: TokenStream, func: TokenStream) -> TokenStream {
     let func: ItemFn = parse_macro_input!(func as ItemFn);
-    let ItemFn {
-        ident,
-        decl,
-        ..
-    } = &func;
+    let ident = &func.sig.ident;
+    let ret = &func.sig.output;
+    let args = &func.sig.inputs;
     let name = format!("{}", ident);
     let pure_args: PureArguments = parse_macro_input!(pure_args as PureArguments);
     let direct_fn: &mut Option<String> = &mut (*DIRECT_NAME.lock().unwrap());
     let direct_get_fn = Ident::new(&prefix!(name), ident.span());
-    let argument_ident = Ident::new(&prefix!("Argument"), ident.span());
     let call_fn_name = Ident::new(&prefix!(name, "call"), ident.span());
-    let call_fn = generate_call_fn(&decl.inputs, &call_fn_name, &ident);
+    let call_fn = generate_call_fn(args, &call_fn_name, ident, ret);
     let mut error_info: TokenStream2 = check_arguments(&pure_args.0);
 
 
@@ -262,10 +237,8 @@ pub fn direct(pure_args: TokenStream, func: TokenStream) -> TokenStream {
 
         #func
 
-        fn #direct_get_fn() -> Vec<#argument_ident> {
-            let direct_fn: &mut Option<fn(raws: &Vec<_commander_rust_Raw>, app: _commander_rust_Cli)> = &mut (*DIRECT_FN.lock().unwrap());
-
-            *direct_fn.borrow_mut() = Some(#call_fn_name);
+        fn #direct_get_fn() -> Vec<::commander_rust::Argument> {
+            COMMANDER.register_direct_handler(#call_fn_name);
             #pure_args
         }
 
@@ -286,142 +259,36 @@ pub fn direct(pure_args: TokenStream, func: TokenStream) -> TokenStream {
 pub fn entry(pure_arguments: TokenStream, main: TokenStream) -> TokenStream {
     let pure_args: PureArguments = parse_macro_input!(pure_arguments as PureArguments);
     let main: ItemFn = parse_macro_input!(main as ItemFn);
-    let ItemFn {
-        ident,
-        ..
-    } = &main;
+    let ident = &main.sig.ident;
+    let ret = &main.sig.output;
+    let out = match ret {
+        ReturnType::Default => quote! { () },
+        ReturnType::Type(_, t) => quote! { #t },
+    };
     let target = format!("{}", ident);
-    let opts = COMMAND_OPTIONS.lock().unwrap();
-    let imports = vec![
-        import!(Argument as _commander_rust_Argument),
-        import!(ArgumentType as _commander_rust_ArgumentType),
-        import!(Command as _commander_rust_Command),
-        import!(Options as _commander_rust_Options),
-        import!(Raw as _commander_rust_Raw),
-        import!(normalize as _commander_rust_normalize),
-        import!(Instance as _commander_rust_Instance),
-        import!(ls as _commander_rust_ls),
-        import!(Application as _commander_rust_Application),
-        import!(Cli as _commander_rust_Cli),
-    ];
-    let get_fn = Ident::new(&prefix!("main"), ident.span());
-    let app_token = Ident::new(&prefix!("Application"), ident.span());
-    let get_fn_names = GET_FN_NAMES.lock().unwrap();
-    let direct_fn = &(*DIRECT_NAME.lock().unwrap());
-    let mut get_cmds_fns = vec![];
-    let mut get_opts_fns = vec![];
     let mut error_info = check_arguments(&pure_args.0);
 
-    // init can be used with fn main only
+    // entry can only be used with fn main.
     if target != String::from("main") {
         error_info = compile_error_info(ident.span(), ENTRY_ONLY_MAIN);
     }
 
-    if let Some(v) = opts.get("main") {
-        for i in v {
-            get_opts_fns.push(Ident::new(&prefix!("main", i), ident.span()));
-        }
-    }
 
-    for i in get_fn_names.iter() {
-        get_cmds_fns.push(Ident::new(&prefix!(i), ident.span()));
-    }
-
-    let needed = quote! {
+    let entry = quote! {
         #error_info
-        mod _commander_rust_Inner {
-            use crate::_commander_rust_ls;
-            use crate::_commander_rust_Raw;
-            use crate::_commander_rust_Cli;
 
-            type Raw = _commander_rust_Raw;
-            type Map = std::collections::HashMap<String, fn(raws: &Vec<Raw>, app: _commander_rust_Cli)>;
-            type Mutex = std::sync::Mutex<Map>;
-
-            _commander_rust_ls! {
-               pub static ref CALL_FNS: Mutex = Mutex::new(Map::new());
-               pub static ref DIRECT_FN: std::sync::Mutex<Option<fn(raws: &Vec<Raw>, app: _commander_rust_Cli)>> = std::sync::Mutex::new(None);
-            }
-
-            pub const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-            pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-            pub const DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
+        commander_rust::ls! {
+            pub static ref COMMANDER: ::commander_rust::Commander<#out> =
+            ::commander_rust::Commander::new(
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
+                env!("CARGO_PKG_DESCRIPTION")
+            );
         }
-
-        use _commander_rust_Inner::{ CALL_FNS, DIRECT_FN, VERSION, DESCRIPTION, APP_NAME };
-        #(#imports)*
 
         #main
     };
-
-    // inject direct-functions' arguments or not
-    if let Some(df) = direct_fn {
-        let direct_get_fn = Ident::new(&prefix!(df), Span2::call_site());
-
-        TokenStream::from(quote! {
-            #needed
-
-            fn #get_fn() -> #app_token {
-                let mut application = #app_token {
-                    name: String::from(APP_NAME),
-                    desc: String::from(DESCRIPTION),
-                    opts: vec![],
-                    cmds: vec![],
-                    direct_args: vec![],
-                };
-
-                application.opts = {
-                    let mut v = vec![];
-                    #(
-                        v.push(#get_opts_fns());
-                    )*
-                    v
-                };
-                application.cmds = {
-                    let mut v = vec![];
-                    #(
-                        v.push(#get_cmds_fns());
-                    )*
-                    v
-                };
-                // inject direct-fns
-                application.direct_args = #direct_get_fn();
-
-                application
-            }
-        })
-    } else {
-        TokenStream::from(quote!{
-            #needed
-
-            fn #get_fn() -> #app_token {
-                let mut application = #app_token {
-                    name: String::from(APP_NAME),
-                    desc: String::from(DESCRIPTION),
-                    opts: vec![],
-                    cmds: vec![],
-                    direct_args: vec![],
-                };
-
-                application.opts = {
-                    let mut v = vec![];
-                    #(
-                        v.push(#get_opts_fns());
-                    )*
-                    v
-                };
-
-                application.cmds = {
-                    let mut v = vec![];
-                    #(
-                        v.push(#get_cmds_fns());
-                    )*
-                    v
-                };
-                application
-            }
-        })
-    }
+    entry.into()
 }
 
 /// Run cli now.
@@ -430,56 +297,42 @@ pub fn entry(pure_arguments: TokenStream, main: TokenStream) -> TokenStream {
 /// See `Application` for more details.
 ///
 #[proc_macro]
-pub fn run(_: TokenStream) -> TokenStream {
-    TokenStream::from(quote! {
-        {
-            // _commander_rust_main is generated by `entry`
-            //
-            let mut app = _commander_rust_main();
-            let ins;
+pub fn run(input: TokenStream) -> TokenStream {
+    println!("{:#?}", input);
+    let mut get_cmds_fns:Vec<Ident> = vec![];
+    let mut get_opts_fns:Vec<Ident> = vec![];
+    let direct_fn = &(*DIRECT_NAME.lock().unwrap());
 
-            app.derive();
-            ins = _commander_rust_normalize(std::env::args().into_iter().collect::<Vec<String>>(), &app);
-
-            let cli = _commander_rust_Cli::from(&ins, &app);
-            let fns = CALL_FNS.lock().unwrap();
-
-            if let Some(cli) = cli {
-                if cli.has("help") || cli.has("h") {
-                    // display sub-command usage
-                    if cli.cmd.is_some() {
-                        for cmd in &app.cmds {
-                            if cmd.name == cli.get_name() {
-                                println!("{:#?}", cmd);
-                                break;
-                            }
-                        }
-                    } else {
-                        // display cli usage
-                        println!("{:#?}", app);
-                    }
-                } else if cli.has("version") || cli.has("V") {
-                    println!("version: {}", VERSION);
-                } else {
-                    if let Some(callback) = fns.get(&cli.get_name()) {
-                        callback(&cli.get_raws(), cli);
-                    } else if !cli.direct_args.is_empty() {
-                        let df = *DIRECT_FN.lock().unwrap();
-
-                        if let Some(f) = &df {
-                            f(&cli.direct_args.clone(), cli)
-                        } else {
-                            println!("ERRRRR");
-                        }
-                    } else {
-                        eprintln!("Unknown usage. Using `{} --help` for more help information.\n", APP_NAME);
-                    }
-                }
-            } else {
-                println!("Using `{} --help` for more help information.", APP_NAME);
-            }
-
-            app
+    // Options for main are global. For each option e.g. `--foo` we will collect
+    // identifier (in this example `_commander_rs_main_foo`) into
+    // `get_opts_fns`.
+    let opts = COMMAND_OPTIONS.lock().unwrap();
+    if let Some(v) = opts.get("main") {
+        for i in v {
+            get_opts_fns.push(Ident::new(&prefix!("main", i), Span2::call_site()));
         }
-    })
+    }
+
+    // For each registered command e.g. `find` we collect identifier
+    // (in this example `_commander_rs_find`) into `get_cmds_fns`.
+    let get_fn_names = GET_FN_NAMES.lock().unwrap();
+    for i in get_fn_names.iter() {
+        get_cmds_fns.push(Ident::new(&prefix!(i), Span2::call_site()));
+    }
+
+    let direct_get_fn = if let Some(df) = direct_fn {
+        let direct_get = Ident::new(&prefix!(df), Span2::call_site());
+        quote! { #direct_get() }
+    } else {
+        quote! { vec![] }
+    };
+
+    let run = quote! {
+        COMMANDER.run(
+            vec![#(#get_cmds_fns(),)*],
+            vec![#(#get_opts_fns(),)*],
+            #direct_get_fn
+        )
+    };
+    run.into()
 }

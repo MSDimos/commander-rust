@@ -45,8 +45,8 @@
 ##### 从`Github`下载
 
 ```toml
-[dependencies.commander_rust]
-git = "https://github.com/MSDimos/commander_rust"
+[dependencies.commander-rust]
+git = "https://github.com/MSDimos/commander-rust"
 branch = "master"
 ```
 
@@ -54,7 +54,7 @@ branch = "master"
 
 ```toml
 [dependencies]
-commander_rust = "1.1.3" # 指定其他任意你需要的版本
+commander-rust = "1.1.3" # 指定其他任意你需要的版本
 ```
 
 #### 使用它
