@@ -23,22 +23,22 @@ impl ToTokens for ArgumentType {
         match self {
             &ArgumentType::RequiredSingle => {
                 (quote! {
-                    _commander_rust_ArgumentType::RequiredSingle
+                    ::commander_rust::ArgumentType::RequiredSingle
                 }).to_tokens(tokens);
             },
             &ArgumentType::RequiredMultiple => {
                 (quote! {
-                    _commander_rust_ArgumentType::RequiredMultiple
+                    ::commander_rust::ArgumentType::RequiredMultiple
                 }).to_tokens(tokens);
             },
             &ArgumentType::OptionalSingle => {
                 (quote! {
-                    _commander_rust_ArgumentType::OptionalSingle
+                    ::commander_rust::ArgumentType::OptionalSingle
                 }).to_tokens(tokens);
             },
             &ArgumentType::OptionalMultiple => {
                 (quote! {
-                    _commander_rust_ArgumentType::OptionalMultiple
+                    ::commander_rust::ArgumentType::OptionalMultiple
                 }).to_tokens(tokens);
             }
         }
@@ -60,7 +60,7 @@ impl ToTokens for Argument {
         } = self;
         let name = format!("{}", name);
         let expand = quote! {
-            _commander_rust_Argument {
+            ::commander_rust::Argument {
                 name: String::from(#name),
                 ty: #ty,
             }
@@ -154,7 +154,7 @@ impl ToTokens for CommandToken {
             quote!(None)
         };
         let expand = quote! {
-            _commander_rust_Command {
+            ::commander_rust::Command {
                 name: String::from(#name),
                 args: vec![#( #args ),*],
                 desc: #desc,
@@ -279,7 +279,7 @@ impl ToTokens for OptionsToken {
         };
 
         let expand = quote! {
-            _commander_rust_Options {
+            ::commander_rust::Options {
                 short: String::from(#short),
                 long: String::from(#long),
                 arg: #arg,

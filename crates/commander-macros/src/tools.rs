@@ -54,7 +54,7 @@ pub fn generate_call_fn(
     }
 
     (quote! {
-        fn #call_fn_name(raws: &Vec<_commander_rust_Raw>, cli: _commander_rust_Cli) #ret {
+        fn #call_fn_name(raws: &Vec<::commander_rust::Raw>, cli: ::commander_rust::Cli) #ret {
             #fn_name(#(#tokens,)*)
         }
     }).into()

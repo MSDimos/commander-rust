@@ -44,18 +44,6 @@ macro_rules! prefix {
     }
 }
 
-macro_rules! import {
-    ($o: ident as $r: ident) => {
-        quote! {
-            use commander_rust::{ $o as $r };
-        }
-    };
-    ($o: ident as $r: ident from $f: path) => {
-        quote! {
-            use $f::{ $o as $r };
-        }
-    }
-}
 
 lazy_static! {
     static ref COMMAND_OPTIONS: Mutex<HashMap<String, Vec<String>>> = Mutex::new(HashMap::new());
@@ -87,7 +75,6 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     let ident = &method.sig.ident;
     let name = format!("{}", ident);
     let get_fn = Ident::new(&prefix!(name), ident.span());
-    let cmd_token = Ident::new(&prefix!("Command"), ident.span());
     let opts = COMMAND_OPTIONS.lock().unwrap();
     let mut get_fn_names = GET_FN_NAMES.lock().unwrap();
     let mut get_fns = vec![];
@@ -122,7 +109,7 @@ pub fn command(cmd: TokenStream, method: TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         #error_info
 
-        fn #get_fn() -> #cmd_token {
+        fn #get_fn() -> ::commander_rust::Command {
             COMMANDER.register_command_handler(String::from(#name), #call_fn_name);
 
             let mut command = #command;
@@ -162,7 +149,6 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
     let opt_name = format!("{}", option.long);
     let fn_name = prefix!(name, opt_name);
     let get_fn = Ident::new(&fn_name, option.long.span());
-    let opt_token = Ident::new(&prefix!("Options"), ident.span());
     let mut opts = COMMAND_OPTIONS.lock().unwrap();
     let mut error_info = TokenStream2::new();
     let mut all_opts = OPTIONS.lock().unwrap();
@@ -190,7 +176,7 @@ pub fn option(opt: TokenStream, method: TokenStream) -> TokenStream {
         TokenStream::from(quote! {
             #error_info
 
-            fn #get_fn() -> #opt_token {
+            fn #get_fn() -> ::commander_rust::Options {
                 #option
             }
 
@@ -235,7 +221,6 @@ pub fn direct(pure_args: TokenStream, func: TokenStream) -> TokenStream {
     let pure_args: PureArguments = parse_macro_input!(pure_args as PureArguments);
     let direct_fn: &mut Option<String> = &mut (*DIRECT_NAME.lock().unwrap());
     let direct_get_fn = Ident::new(&prefix!(name), ident.span());
-    let argument_ident = Ident::new(&prefix!("Argument"), ident.span());
     let call_fn_name = Ident::new(&prefix!(name, "call"), ident.span());
     let call_fn = generate_call_fn(args, &call_fn_name, ident, ret);
     let mut error_info: TokenStream2 = check_arguments(&pure_args.0);
@@ -252,7 +237,7 @@ pub fn direct(pure_args: TokenStream, func: TokenStream) -> TokenStream {
 
         #func
 
-        fn #direct_get_fn() -> Vec<#argument_ident> {
+        fn #direct_get_fn() -> Vec<::commander_rust::Argument> {
             COMMANDER.register_direct_handler(#call_fn_name);
             #pure_args
         }
@@ -281,19 +266,6 @@ pub fn entry(pure_arguments: TokenStream, main: TokenStream) -> TokenStream {
         ReturnType::Type(_, t) => quote! { #t },
     };
     let target = format!("{}", ident);
-    let imports = vec![
-        import!(Argument as _commander_rust_Argument),
-        import!(ArgumentType as _commander_rust_ArgumentType),
-        import!(Command as _commander_rust_Command),
-        import!(Options as _commander_rust_Options),
-        import!(Raw as _commander_rust_Raw),
-        import!(normalize as _commander_rust_normalize),
-        import!(Instance as _commander_rust_Instance),
-        import!(ls as _commander_rust_ls),
-        import!(Application as _commander_rust_Application),
-        import!(Cli as _commander_rust_Cli),
-        import!(Commander as _commander_rust_Commander),
-    ];
     let mut error_info = check_arguments(&pure_args.0);
 
     // entry can only be used with fn main.
@@ -304,12 +276,10 @@ pub fn entry(pure_arguments: TokenStream, main: TokenStream) -> TokenStream {
 
     let entry = quote! {
         #error_info
-        // Import necessary commander modules with prefixed names.
-        #(#imports)*
-        
-        _commander_rust_ls! {
-            pub static ref COMMANDER:_commander_rust_Commander<#out> =
-            _commander_rust_Commander::new(
+
+        commander_rust::ls! {
+            pub static ref COMMANDER: ::commander_rust::Commander<#out> =
+            ::commander_rust::Commander::new(
                 env!("CARGO_PKG_NAME"),
                 env!("CARGO_PKG_VERSION"),
                 env!("CARGO_PKG_DESCRIPTION")
@@ -329,7 +299,6 @@ pub fn entry(pure_arguments: TokenStream, main: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn run(input: TokenStream) -> TokenStream {
     println!("{:#?}", input);
-    // let app_token = Ident::new(&prefix!("Application"), ident.span());
     let mut get_cmds_fns:Vec<Ident> = vec![];
     let mut get_opts_fns:Vec<Ident> = vec![];
     let direct_fn = &(*DIRECT_NAME.lock().unwrap());
