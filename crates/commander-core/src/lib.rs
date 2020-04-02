@@ -243,7 +243,7 @@ pub struct Cli {
     pub direct_args: Option<Vec<Raw>>,
 }
 
-impl <Out> Application<Out> {
+impl<Out> Application<Out> {
     pub fn new (name:String, desc:String, out:Option<Out>) -> Self {
         Application {
             name,
@@ -253,6 +253,16 @@ impl <Out> Application<Out> {
             direct_args: vec![],
             out
         }
+    }
+
+    pub fn parse(&self) -> Vec<Instance> {
+        normalize(std::env::args().into_iter().collect::<Vec<String>>(), self)
+    }
+
+    pub fn cli(&mut self) -> Option<Cli> {
+        self.derive();
+        let instances = self.parse();
+        Cli::from(&instances, &self)
     }
 
     /// Deriving `#[option(-h, --help, "output usage information")]`
