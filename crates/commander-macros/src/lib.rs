@@ -339,76 +339,46 @@ pub fn entry(pure_arguments: TokenStream, main: TokenStream) -> TokenStream {
         #main
     };
 
-    // inject direct-functions' arguments or not
-    if let Some(df) = direct_fn {
+    let direct_get_fn = if let Some(df) = direct_fn {
         let direct_get_fn = Ident::new(&prefix!(df), Span2::call_site());
-
-        TokenStream::from(quote! {
-            #needed
-
-            fn #get_fn <Out>(out:Option<Out>) -> #app_token<Out> {
-                let mut application = #app_token {
-                    name: String::from(APP_NAME),
-                    desc: String::from(DESCRIPTION),
-                    opts: vec![],
-                    cmds: vec![],
-                    direct_args: vec![],
-                    out,
-                };
-
-                application.opts = {
-                    let mut v = vec![];
-                    #(
-                        v.push(#get_opts_fns());
-                    )*
-                    v
-                };
-                application.cmds = {
-                    let mut v = vec![];
-                    #(
-                        v.push(#get_cmds_fns());
-                    )*
-                    v
-                };
-                // inject direct-fns
-                application.direct_args = #direct_get_fn();
-                
-                application
-            }
-        })
+        quote! { #direct_get_fn(); }
     } else {
-        TokenStream::from(quote!{
-            #needed
+        quote! { vec![]; }
+    };
 
-            fn #get_fn <Out>(out:Option<Out>) -> #app_token<Out> {
-                let mut application = #app_token {
-                    name: String::from(APP_NAME),
-                    desc: String::from(DESCRIPTION),
-                    opts: vec![],
-                    cmds: vec![],
-                    direct_args: vec![],
-                    out: out,
-                };
 
-                application.opts = {
-                    let mut v = vec![];
-                    #(
-                        v.push(#get_opts_fns());
-                    )*
-                    v
-                };
+    TokenStream::from(quote! {
+        #needed
 
-                application.cmds = {
-                    let mut v = vec![];
-                    #(
-                        v.push(#get_cmds_fns());
-                    )*
-                    v
-                };
-                application
-            }
-        })
-    }
+        fn #get_fn <Out>(out:Option<Out>) -> #app_token<Out> {
+            let mut application = #app_token {
+                name: String::from(APP_NAME),
+                desc: String::from(DESCRIPTION),
+                opts: vec![],
+                cmds: vec![],
+                direct_args: vec![],
+                out: out
+            };
+
+            application.opts = {
+                let mut v = vec![];
+                #(
+                    v.push(#get_opts_fns());
+                )*
+                v
+            };
+            application.cmds = {
+                let mut v = vec![];
+                #(
+                    v.push(#get_cmds_fns());
+                )*
+                v
+            };
+            application.direct_args = #direct_get_fn;
+            
+            application
+        }
+    })
 }
 
 /// Run cli now.
@@ -427,7 +397,7 @@ pub fn run(_: TokenStream) -> TokenStream {
 
             app.derive();
             ins = _commander_rust_normalize(std::env::args().into_iter().collect::<Vec<String>>(), &app);
-
+            
             let cli = _commander_rust_Cli::from(&ins, &app);
             let fns = CALL_FNS.lock().unwrap();
 
@@ -437,29 +407,31 @@ pub fn run(_: TokenStream) -> TokenStream {
                     if cli.cmd.is_some() {
                         for cmd in &app.cmds {
                             if cmd.name == cli.get_name() {
-                                println!("{:#?}", cmd);
+                                println!("{:#}", cmd);
                                 break;
                             }
                         }
                     } else {
                         // display cli usage
-                        println!("{:#?}", app);
+                        println!("{:#}", app);
                     }
                 } else if cli.has("version") || cli.has("V") {
                     println!("version: {}", VERSION);
                 } else {
                     if let Some(callback) = fns.get(&cli.get_name()) {
                         app.out = Some(callback(&cli.get_raws(), cli));
-                    } else if !cli.direct_args.is_empty() {
-                        let df = *DIRECT_FN.lock().unwrap();
-
-                        if let Some(f) = &df {
-                            app.out = Some(f(&cli.direct_args.clone(), cli));
-                        } else {
-                            println!("ERRRRR");
-                        }
                     } else {
-                        eprintln!("Unknown usage. Using `{} --help` for more help information.\n", APP_NAME);
+                        if let Some(direct_args) = cli.direct_args.clone() {
+                            let df = *DIRECT_FN.lock().unwrap();
+
+                            if let Some(f) = &df {
+                                app.out = Some(f(&direct_args, cli));
+                            } else {
+                                println!("ERRRRR");
+                            }
+                        } else {
+                            eprintln!("Unknown usage. Using `{} --help` for more help information.\n", APP_NAME);
+                        }
                     }
                 }
             } else {
