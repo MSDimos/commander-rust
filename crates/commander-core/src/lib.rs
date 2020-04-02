@@ -30,10 +30,11 @@ mod pattern;
 use std::ops::Index;
 use std::collections::HashMap;
 
-use pattern::{ Pattern, PatternType };
+use pattern::{Pattern, PatternType};
 pub use raw::Raw;
+use std::borrow::BorrowMut;
 use std::process::exit;
-
+use std::sync::Mutex;
 /// The type of argument.
 ///
 /// they are:
@@ -93,8 +94,9 @@ pub struct Argument {
 ///
 #[derive(Debug)]
 pub struct Application<Out> {
-    pub name: String,
-    pub desc: String,
+    name: &'static str,
+    version: &'static str,
+    description: &'static str,
     pub cmds: Vec<Command>,
     pub opts: Vec<Options>,
     pub direct_args: Vec<Argument>,
@@ -244,27 +246,26 @@ pub struct Cli {
 }
 
 impl<Out> Application<Out> {
-    pub fn new (name:String, desc:String, out:Option<Out>) -> Self {
-        Application {
+    fn new(
+        name: &'static str,
+        version: &'static str,
+        description: &'static str,
+        cmds: Vec<Command>,
+        opts: Vec<Options>,
+        direct_args: Vec<Argument>,
+    ) -> Self {
+        let mut application = Application {
             name,
-            desc,
-            opts: vec![],
-            cmds: vec![],
-            direct_args: vec![],
-            out
-        }
+            description,
+            version,
+            cmds,
+            opts,
+            direct_args,
+            out: None
+        };
+        application.derive();
+        application
     }
-
-    pub fn parse(&self) -> Vec<Instance> {
-        normalize(std::env::args().into_iter().collect::<Vec<String>>(), self)
-    }
-
-    pub fn cli(&mut self) -> Option<Cli> {
-        self.derive();
-        let instances = self.parse();
-        Cli::from(&instances, &self)
-    }
-
     /// Deriving `#[option(-h, --help, "output usage information")]`
     /// and `#[option(-V, --version, "output the version number")]` for all `Command` and `Application`.
     /// Dont use it!
@@ -579,6 +580,103 @@ impl Instance {
             name: String::from(name),
             args: vec![],
         }
+    }
+}
+
+type Handler<Out> = fn(&Vec<Raw>, Cli) -> Out;
+
+
+pub struct Commander<Out> {
+    call_fns: Mutex<HashMap<String, Handler<Out>>>,
+    direct_fn: Mutex<Option<Handler<Out>>>,
+    name: &'static str,
+    version: &'static str,
+    description: &'static str
+}
+impl<Out> Commander<Out> {
+    pub fn new(name: &'static str, version: &'static str, description: &'static str) -> Self {
+        Commander {
+            call_fns: Mutex::new(HashMap::new()),
+            direct_fn:Mutex::new(None),
+            name,
+            version,
+            description
+        }
+    }
+
+    pub fn register_command_handler(&self, name: String, handler: Handler<Out>) {
+        let mut fns = self.call_fns.lock().unwrap();
+        if !fns.contains_key(&name) {
+            fns.insert(name, handler);
+        }
+    }
+    pub fn register_direct_handler(&self, handler:Handler<Out>) {
+        let mut direct_fn = *self.direct_fn.lock().unwrap();
+        *direct_fn.borrow_mut() = Some(handler);
+    }
+
+    pub fn run(
+        &self,
+        cmds: Vec<Command>,
+        opts: Vec<Options>,
+        args: Vec<Argument>,
+    ) -> Application<Out> {
+        let mut application = Application::new(
+            self.name,
+            self.description,
+            self.version,
+            cmds,
+            opts,
+            args,
+        );
+
+
+        let args = std::env::args().into_iter().collect::<Vec<String>>();
+        let instances = normalize(args, &application);
+        let cli = Cli::from(&instances, &application);
+
+        if let Some(cli) = cli {
+            if cli.has("help") || cli.has("h") {
+                // display sub-command usage
+                if cli.cmd.is_some() {
+                    for cmd in &application.cmds {
+                        if cmd.name == cli.get_name() {
+                            println!("{:#}", cmd);
+                            break;
+                        }
+                    }
+                } else {
+                    // display cli usage
+                    println!("{:#}", application);
+                }
+            } else if cli.has("version") || cli.has("V") {
+                println!("version: {}", self.version);
+            } else {
+                let fns = self.call_fns.lock().unwrap();
+                if let Some(callback) = fns.get(&cli.get_name()) {
+                    application.out = Some(callback(&cli.get_raws(), cli));
+                } else {
+                    if let Some(direct_args) = cli.direct_args.clone() {
+                        let df = *self.direct_fn.lock().unwrap();
+
+                        if let Some(f) = &df {
+                            application.out = Some(f(&direct_args, cli));
+                        } else {
+                            println!("ERRRRR");
+                        }
+                    } else {
+                        eprintln!(
+                            "Unknown usage. Using `{} --help` for more help information.\n",
+                            self.name
+                        );
+                    }
+                }
+            }
+        } else {
+            println!("Using `{} --help` for more help information.", self.name);
+        }
+
+        application
     }
 }
 

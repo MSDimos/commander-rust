@@ -95,7 +95,7 @@ impl <Out> Display for Application<Out> {
             write!(f, "[options]")?;
         }
 
-        write!(f, "\n\n{}\n\n", self.desc)?;
+        write!(f, "\n\n{}\n\n", self.description)?;
 
         if !self.opts.is_empty() {
             write!(f, "Public options: \n")?;
