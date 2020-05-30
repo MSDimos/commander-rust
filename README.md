@@ -4,6 +4,14 @@
     <p align="center">snippet</p>
 </p>
 
+# Attention pls
+This crate is being refactored because of some reasons:
+- some crates used (e.g., `syn`, `quote`, `lazy_static`) are out of date.
+- API is ugly, in process of designing a better and more friendly API.
+- I can't understand the code now anymore, because that I have been busy with other things for a long time.
+- Some bugs exist for a long time.
+- Expecting to expand more pattern.
+- For some other considerations.
 
 # other languages
 [中文文档](https://github.com/MSDimos/commander-rust/blob/master/docs/README_CN.md)

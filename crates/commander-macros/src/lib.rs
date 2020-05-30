@@ -263,9 +263,9 @@ pub fn direct(pure_args: TokenStream, func: TokenStream) -> TokenStream {
         #func
 
         fn #direct_get_fn() -> Vec<#argument_ident> {
-            let direct_fn: &mut Option<fn(raws: &Vec<_commander_rust_Raw>, app: _commander_rust_Cli)> = &mut (*DIRECT_FN.lock().unwrap());
+            let mut direct_fn: &mut Option<fn(raws: &Vec<_commander_rust_Raw>, app: _commander_rust_Cli)> = &mut (*DIRECT_FN.lock().unwrap());
 
-            *direct_fn.borrow_mut() = Some(#call_fn_name);
+            direct_fn.replace(#call_fn_name);
             #pure_args
         }
 
