@@ -13,6 +13,8 @@ This crate is being refactored because of some reasons:
 - Expecting to expand more pattern.
 - For some other considerations.
 
+New version will be released in these days after enough testing, I hope.
+
 # other languages
 [中文文档](https://github.com/MSDimos/commander-rust/blob/master/docs/README_CN.md)
 
