@@ -1,0 +1,1 @@
+All integration test files need to enable feature `test`.

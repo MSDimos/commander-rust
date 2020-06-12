@@ -1,0 +1,382 @@
+use crate::parser::{Segment, ParserResult};
+use crate::traits::{GetArgs, GetOpt};
+use crate::Command;
+use std::ops::{Deref, DerefMut};
+use std::str::FromStr;
+use std::num::ParseIntError;
+use std::path::{PathBuf, Path};
+use std::fmt::Debug;
+use std::collections::HashMap;
+
+// TODO: implement #[derive(FromArgs, FromArg)]
+
+/// type conversion needed
+pub trait FromArg<'a>: Sized {
+    type Error: Debug;
+    fn from_arg(arg: &'a Arg) -> Result<Self, Self::Error>;
+}
+
+pub trait FromArgs<'a>: Sized {
+    type Error: Debug;
+    fn from_args(args: &'a Args) -> Result<Self, Self::Error>;
+}
+
+#[derive(Clone, Debug)]
+pub struct Arg(pub String);
+
+impl Deref for Arg {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Arg {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<'a> FromArg<'a> for &'a Arg {
+    type Error = ();
+
+    #[inline]
+    fn from_arg(arg: &'a Arg) -> Result<&'a Arg, Self::Error> {
+        Ok(arg)
+    }
+}
+
+impl<'a> FromArg<'a> for String {
+    type Error = ();
+
+    #[inline]
+    fn from_arg(arg: &'a Arg) -> Result<String, Self::Error> {
+        if arg.is_empty() { Err(()) } else {
+            Ok(arg.0.clone())
+        }
+    }
+}
+
+impl<'a> FromArg<'a> for &'a str {
+    type Error = ();
+
+    #[inline]
+    fn from_arg(arg: &'a Arg) -> Result<Self, Self::Error> {
+        Ok(&arg.0)
+    }
+}
+
+impl<'a> FromArg<'a> for PathBuf {
+    type Error = ();
+
+    fn from_arg(arg: &'a Arg) -> Result<Self, Self::Error> {
+        Ok(PathBuf::from(arg.as_str()))
+    }
+}
+
+impl<'a> FromArg<'a> for &'a Path {
+    type Error = ();
+
+    fn from_arg(arg: &'a Arg) -> Result<Self, Self::Error> {
+        Ok(Path::new(arg.as_str()))
+    }
+}
+
+macro_rules! impl_ints {
+    ($($T: ty),+) => {
+        $(
+            impl<'a> FromArg<'a> for $T {
+                type Error = ParseIntError;
+
+                #[inline]
+                fn from_arg(arg: &'a Arg) -> Result<$T, Self::Error> {
+                    <$T as FromStr>::from_str(&arg)
+                }
+            }
+        )*
+    };
+}
+
+impl_ints![u8, u16, u32, u64, u128];
+impl_ints![i8, i16, i32, i64, i128];
+
+impl<'a, T: FromArg<'a>> FromArg<'a> for Result<T, T::Error> {
+    type Error = T::Error;
+
+    #[inline]
+    fn from_arg(arg: &'a Arg) -> Result<Self, Self::Error> {
+        match T::from_arg(arg) {
+            Ok(val) => Ok(Ok(val)),
+            Err(e) => Ok(Err(e)),
+        }
+    }
+}
+
+impl<'a, T: FromArg<'a>> FromArg<'a> for Option<T> {
+    type Error = ();
+
+    #[inline]
+    fn from_arg(arg: &'a Arg) -> Result<Self, Self::Error> {
+        match T::from_arg(arg) {
+            Ok(val) => Ok(Some(val)),
+            Err(_) => Ok(None),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Args(pub Vec<Arg>);
+
+impl From<Segment> for Args {
+    fn from(seg: Segment) -> Args {
+        match seg {
+            Segment::Short(_, args)
+            | Segment::Long(_, args)
+            | Segment::Command(_, args) => {
+                let mut args_strs = vec![];
+
+                for arg in args {
+                    if let Segment::Raw(str) = arg {
+                        args_strs.push(Arg(str));
+                    }
+                }
+
+                Args(vec![])
+            }
+            _ => Args(vec![]),
+        }
+    }
+}
+
+impl Deref for Args {
+    type Target = Vec<Arg>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Args {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<'a, T: FromArg<'a>> FromArgs<'a> for Vec<T> {
+    type Error = T::Error;
+
+    fn from_args(args: &'a Args) -> Result<Self, Self::Error> {
+        let mut result = vec![];
+
+        for arg in args.iter() {
+            match T::from_arg(arg) {
+                Ok(val) => result.push(val),
+                Err(e) => return Err(e),
+            }
+        }
+
+        Ok(result)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Mixed {
+    Single(Arg),
+    Multiply(Args),
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Application {
+    pub sub_name: Option<String>,
+    pub sub_args: HashMap<String, Mixed>,
+    pub cmd_args: HashMap<String, Mixed>,
+    pub local_opts: HashMap<String, HashMap<String, Mixed>>,
+    pub global_opts: HashMap<String, HashMap<String, Mixed>>,
+}
+
+// alias it for using
+pub type App = Application;
+
+impl Application {
+    fn extract_args<T: GetArgs>(args: &Vec<Segment>, source: &T) -> HashMap<String, Mixed> {
+        let mut cmd_args = HashMap::new();
+
+        for (idx, cmd_arg) in source.get_args().iter().enumerate() {
+            if !cmd_arg.ty.is_multiply() {
+                if let Segment::Raw(s) = &args[idx] {
+                    cmd_args.insert(cmd_arg.name.clone(), Mixed::Single(Arg(s.to_string())));
+                }
+            } else if idx < args.len() {
+                let mut mixed_args = vec![];
+
+                for i in idx..args.len() {
+                    if let Segment::Raw(s) = &args[i] {
+                        mixed_args.push(Arg(s.to_string()));
+                    }
+                }
+
+                cmd_args.insert(cmd_arg.name.clone(), Mixed::Multiply(Args(mixed_args)));
+            }
+        }
+
+        cmd_args
+    }
+
+    fn extract_args_for_options<T: GetOpt>(opts: &Vec<Segment>, source: &T) -> HashMap<String, HashMap<String, Mixed>> {
+        let mut mixed_opts = HashMap::new();
+
+        for opt in opts.iter() {
+            match opt {
+                Segment::Long(name, args)
+                | Segment::Short(name, args) => {
+                    if let Some(opt) = source.get_opt(name) {
+                        if let Some(short) = &opt.short {
+                            mixed_opts.insert(short.to_string(), Self::extract_args(args, opt));
+                        }
+                        mixed_opts.insert(opt.long.to_string(), Self::extract_args(args, opt));
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        mixed_opts
+    }
+
+    pub fn from_parser_result(parser_result: &ParserResult, cmd: &Command) -> Result<Self, String> {
+        if let Ok(((in_cmd, in_sub), in_local_opts, in_global_opts)) = parser_result {
+            let mut sub_name = None;
+            let mut local_opts = HashMap::new();
+            let cmd_args = if let Some(Segment::Command(_, args)) = &in_cmd {
+                Self::extract_args(args, cmd)
+            } else { HashMap::new() };
+            let sub_args = if let Some(Segment::Command(Some(name), args)) = &in_sub {
+                sub_name = Some(name.to_string());
+
+                if let Some(sub_cmd) = cmd.get_sub_command(name) {
+                    local_opts = Self::extract_args_for_options(&in_local_opts, sub_cmd);
+                    Self::extract_args(args, sub_cmd)
+                } else {
+                    return Err(format!("can not find `{}`?", name));
+                }
+            } else { HashMap::new() };
+            let global_opts = Self::extract_args_for_options(&in_global_opts, cmd);
+
+            return Ok(Application {
+                sub_name,
+                sub_args,
+                cmd_args,
+                local_opts,
+                global_opts,
+            });
+        }
+
+        Err("can't parse cli as specified format".to_string())
+    }
+
+    pub fn contains_opt<T: ToString>(&self, key: T) -> bool {
+        let key = key.to_string();
+        self.local_opts.contains_key(&key) || self.global_opts.contains_key(&key)
+    }
+
+    pub fn contains_global_opt<T: ToString>(&self, key: T) -> bool {
+        self.global_opts.contains_key(&key.to_string())
+    }
+
+    pub fn get_opt<T: ToString>(&self, key: T) -> Option<&HashMap<String, Mixed>> {
+        let key_s = key.to_string();
+
+        if self.contains_opt(key) {
+            if self.local_opts.contains_key(&key_s) {
+                self.local_opts.get(&key_s)
+            } else {
+                self.global_opts.get(&key_s)
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn get_sub_arg<T: ToString>(&self, key: T) -> Option<&Mixed> {
+        self.sub_args.get(&key.to_string())
+    }
+
+    pub fn get_cmd_arg<T: ToString>(&self, key: T) -> Option<&Mixed> {
+        self.cmd_args.get(&key.to_string())
+    }
+
+    pub fn sub_name(&self) -> String {
+        self.sub_name.clone().unwrap()
+    }
+
+    pub fn args_len(&self) -> usize {
+        self.sub_args.len()
+    }
+
+    pub fn opts_len(&self) -> usize {
+        self.local_opts.len() + self.global_opts.len()
+    }
+}
+
+pub trait FromApp<'a>: Sized {
+    type Error: Debug;
+    fn from_app(app: &'a Application) -> Result<Self, Self::Error>;
+}
+
+impl<'a> FromApp<'a> for Application {
+    type Error = ();
+
+    fn from_app(app: &'a Application) -> Result<Self, Self::Error> {
+        Ok(app.clone())
+    }
+}
+
+pub struct Opts(pub HashMap<String, HashMap<String, Mixed>>);
+pub struct GlobalOpts(pub HashMap<String, HashMap<String, Mixed>>);
+
+impl Deref for Opts {
+    type Target = HashMap<String, HashMap<String, Mixed>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Opts {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Deref for GlobalOpts {
+    type Target = HashMap<String, HashMap<String, Mixed>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for GlobalOpts {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<'a> FromApp<'a> for Opts {
+    type Error = ();
+
+    fn from_app(app: &'a Application) -> Result<Self, Self::Error> {
+        Ok(Opts(app.local_opts.clone()))
+    }
+}
+
+impl<'a> FromApp<'a> for GlobalOpts {
+    type Error = ();
+
+    fn from_app(app: &'a Application) -> Result<Self, Self::Error> {
+        Ok(GlobalOpts(app.global_opts.clone()))
+    }
+}
+
+

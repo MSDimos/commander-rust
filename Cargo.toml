@@ -1,0 +1,25 @@
+[package]
+name = "commander-rust"
+version = "0.1.0"
+authors = ["Dimos Double <doubledimos@outlook.com>"]
+edition = "2018"
+
+
+[workspace]
+members = [
+    "./crates/commander-rust-core/",
+    "./crates/commander-rust-macro/",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+test = ["commander-rust-core/test"]
+
+[dependencies.commander-rust-core]
+path = "crates/commander-rust-core"
+default-features = false
+
+[dependencies.commander-rust-macro]
+path = "crates/commander-rust-macro"
+default-features = false
