@@ -1,5 +1,6 @@
 #![feature(proc_macro_hygiene)]
-use commander_rust::{ option, sub_command, command, register, run };
+
+use commander_rust::{ option, sub_command, command, execute };
 
 #[allow(dead_code)]
 #[option(-m, --movie <movie_name>, "play a movie")]
@@ -27,6 +28,5 @@ fn media_fn() {
 }
 
 fn main() {
-    register!(media_fn, [play_fn, transfer_fn]);
-    run!();
+    execute!(media_fn, [play_fn, transfer_fn]);
 }

@@ -101,10 +101,10 @@ fn parse_test() {
     let segments = Segment::from_vec(args_os);
     assert_eq!(
         vec![
-            Segment::Error(String::from("--long=")),
-            Segment::Error(String::from("-abc-cd")),
-            Segment::Error(String::from("--=")),
-            Segment::Error(String::from("---")),
+            Segment::Raw(String::from("--long=")),
+            Segment::Raw(String::from("-abc-cd")),
+            Segment::Raw(String::from("--=")),
+            Segment::Raw(String::from("---")),
         ],
         segments,
     );

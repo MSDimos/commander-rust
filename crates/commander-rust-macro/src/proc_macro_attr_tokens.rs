@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
-use quote::{ ToTokens, quote, format_ident };
+use quote::ToTokens;
+use quote::{ quote, format_ident };
 use proc_macro2::{ TokenStream as TokenStream2, Span as Span2 };
 use syn::{ Ident, LitStr, Token, bracketed, token };
 use syn::parse::{ Parse, ParseStream, Result };
@@ -498,10 +499,16 @@ pub(crate) struct Command {
     pub(crate) cmd_args: Arguments,
     pub(crate) options: Vec<Options>,
     pub(crate) desc: Option<LitStr>,
+    pub(crate) version: Option<LitStr>,
 }
 
 impl Parse for Command {
     fn parse(stream: ParseStream) -> Result<Self> {
+        let mut version = None;
+        if stream.peek(LitStr) {
+            version = Some(stream.parse::<LitStr>()?);
+            stream.parse::<token::Comma>()?;
+        }
         let name = stream.parse::<Ident>()?;
         let cmd_args = stream.parse::<Arguments>()?;
         let desc = if stream.peek(token::Comma) {
@@ -517,6 +524,7 @@ impl Parse for Command {
             cmd_args,
             options: vec![],
             desc,
+            version,
         })
     }
 }
@@ -529,14 +537,16 @@ impl ToTokens for Command {
             cmd_args,
             options,
             desc,
+            version,
         } = self;
         let cmd_name = name.to_string();
         let cmd_args = &cmd_args.inner;
         let desc = if let Some(desc) = desc {
             quote! { Some(String::from(#desc)) }
-        } else {
-            quote! { None }
-        };
+        } else { quote! { None } };
+        let version = if let Some(ver) = version {
+            quote! { Some(String::from(#ver)) }
+        } else { quote! { None } };
         let hidden_output = import_raw_type(vec![TOKEN_COMMAND]);
         let traits_needed = vec![
             import_raw_trait(TRAIT_PUSH_ARGUMENT),
@@ -547,6 +557,11 @@ impl ToTokens for Command {
             {
                 #(#traits_needed;)*
                 let mut cmd = #hidden_output::new(String::from(#cmd_name), #desc);
+
+                if let Some(ver) = #version {
+                    cmd.version = ver;
+                }
+
                 #(cmd.push_sub_command(#sub_cmds);)*
                 #(cmd.push_argument(#cmd_args);)*
                 #(cmd.push_option(#options);)*

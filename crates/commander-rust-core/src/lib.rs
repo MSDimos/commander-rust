@@ -11,7 +11,8 @@ use std::collections::HashSet;
 use std::fmt;
 use traits::{PushSubCommand, PushArgument};
 use std::option::Option::Some;
-use crate::traits::{GetOpts, ContainsOpt, GetOpt};
+use crate::traits::{GetOpts, GetOpt };
+use colored::Colorize;
 
 /// Note: These `struct`s are different from `struct`s with same names
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -203,6 +204,10 @@ impl SubCommand {
             desc,
         }
     }
+
+    pub fn println(&self) {
+        println!("{}", self);
+    }
 }
 
 #[cfg(feature = "test")]
@@ -249,18 +254,12 @@ impl From<&str> for SubCommand {
     }
 }
 
-// impl PartialEq<SubCommand> for SubCommand {
-//     fn eq(&self, other: &SubCommand) -> bool {
-//         self.name == other.name
-//     }
-// }
-
 impl fmt::Display for SubCommand {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let tab = String::from("    ");
 
         if let Some(desc) = &self.desc {
-            writeln!(f, "DESCRIPTION:").unwrap();
+            writeln!(f, "{}:", "DESCRIPTION".bold().italic()).unwrap();
             writeln!(f, "{tab}{}", desc, tab = tab).unwrap();
         }
 
@@ -272,7 +271,7 @@ impl fmt::Display for SubCommand {
             }
         }
 
-        writeln!(f, "\nUSAGE:").unwrap();
+        writeln!(f, "\n{}:", "USAGE".bold().italic()).unwrap();
 
         if self.options.is_empty() {
             writeln!(f, "{tab}{} {}{}\n", self.belong, self.name, args, tab = tab).unwrap();
@@ -281,7 +280,7 @@ impl fmt::Display for SubCommand {
         }
 
         if !self.options.is_empty() {
-            writeln!(f, "OPTIONS:").unwrap();
+            writeln!(f, "{}:", "OPTIONS".bold().italic()).unwrap();
 
             let mut width = 0;
             let mut opts_str = vec![];
@@ -364,13 +363,14 @@ impl PushArgument for SubCommand {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct Command {
     pub name: String,
     sub_cmds: Vec<SubCommand>,
     cmd_args: Vec<Argument>,
     options: Vec<Options>,
     pub desc: Option<String>,
+    pub version: String,
 }
 
 
@@ -382,10 +382,11 @@ impl Command {
             sub_cmds: vec![],
             options: vec![],
             desc,
+            version: String::from(std::env!("CARGO_PKG_VERSION")),
         }
     }
 
-    pub fn get_sub_command<'a>(&'a self, sub_name: &str) -> Option<&'a SubCommand> {
+    pub fn get_sub_cmd<'a>(&'a self, sub_name: &str) -> Option<&'a SubCommand> {
         for sub_cmd in &self.sub_cmds {
             if sub_name == sub_cmd.name {
                 return Some(sub_cmd);
@@ -394,12 +395,26 @@ impl Command {
 
         None
     }
+
+    pub fn println(&self) {
+        println!("{}", self);
+    }
+
+    pub fn println_version(&self) {
+        println!("{}", self.version);
+    }
+
+    pub fn println_sub<T: ToString>(&self, key: T) {
+        if let Some(sub_cmd) = self.get_sub_cmd(&key.to_string()) {
+            sub_cmd.println();
+        }
+    }
 }
 
 #[cfg(feature = "test")]
 impl From<String> for Command {
     fn from(s: String) -> Self {
-        let re = Regex::new(r#"^(?P<name>(\w|_)+)( (?P<args>[^,]+))?(, ("(?P<desc>.*)"))?$"#).unwrap();
+        let re = Regex::new(r#"^("(?P<version>.*)", )?(?P<name>(\w|_)+)( (?P<args>[^,]+))?(, ("(?P<desc>.*)"))?$"#).unwrap();
         let cap = re.captures(&s).unwrap();
         let name = cap["name"].to_string();
         let desc = if cap.name("desc").is_some() {
@@ -408,6 +423,10 @@ impl From<String> for Command {
             None
         };
         let mut cmd = Command::new(name, desc);
+
+        if cap.name("version").is_some() {
+            cmd.version = cap["version"].to_string();
+        }
 
         if cap.name("args").is_some() {
             let args_s = &s[cap.name("args").unwrap().range()];
@@ -438,11 +457,11 @@ impl fmt::Display for Command {
         let tab = String::from("    ");
 
         if let Some(desc) = &self.desc {
-            writeln!(f, "DESCRIPTION:").unwrap();
+            writeln!(f, "{}:", "DESCRIPTION".bold().italic()).unwrap();
             writeln!(f, "{tab}{}", desc, tab = tab).unwrap();
         }
 
-        writeln!(f, "\nUSAGE:").unwrap();
+        writeln!(f, "\n{}:", "USAGE".bold().italic()).unwrap();
 
         let mut args = String::new();
 
@@ -453,12 +472,16 @@ impl fmt::Display for Command {
         }
 
         let opt_fmt = if !self.options.is_empty() {
-            " [--options]".to_string()
+            " [--global-options]".to_string()
         } else {
             String::new()
         };
         let sub_cmd_fmt = if !self.sub_cmds.is_empty() {
-            " [sub_commands]".to_string()
+            if self.sub_cmds.iter().any(|sub_cmd| !sub_cmd.options.is_empty()) {
+                " [sub_commands] [--options]".to_string()
+            } else {
+                " [sub_commands]".to_string()
+            }
         } else {
             String::new()
         };
@@ -466,7 +489,7 @@ impl fmt::Display for Command {
         writeln!(f, "{tab}{}{}{}{}\n", self.name, args, opt_fmt, sub_cmd_fmt, tab = tab).unwrap();
 
         if !self.options.is_empty() {
-            writeln!(f, "OPTIONS:").unwrap();
+            writeln!(f, "{}:", "OPTIONS".bold().italic()).unwrap();
 
             let mut width = 0;
             let mut opts_str = vec![];
@@ -511,7 +534,7 @@ impl fmt::Display for Command {
                 width = width.max(sub_cmd.name.len() + 4);
             }
 
-            writeln!(f, "\nSUB_COMMANDS:").unwrap();
+            writeln!(f, "\n{}:", "SUB_COMMANDS".bold().italic()).unwrap();
 
             for sub_cmd in self.sub_cmds.iter() {
                 writeln!(
@@ -625,35 +648,23 @@ impl<T: GetArgs> ValidateArgs for T {
     }
 }
 
-impl<T: GetOpts> ContainsOpt for T {
-    fn contains_option(&self, opt_name: &str) -> bool {
+impl<T: GetOpts> GetOpt for T {
+    fn get_long_opt(&self, opt_name: &str) -> Option<&Options> {
         for opt in self.get_opts().iter() {
-            if let Some(short) = &opt.short {
-                if short == opt_name {
-                    return true;
-                }
-            }
-
             if opt_name == opt.long {
-                return true;
+                return Some(opt);
             }
         }
 
-        false
+        None
     }
-}
 
-impl<T: GetOpts> GetOpt for T {
-    fn get_opt(&self, opt_name: &str) -> Option<&Options> {
+    fn get_short_opt(&self, opt_name: &str) -> Option<&Options> {
         for opt in self.get_opts().iter() {
             if let Some(short) = &opt.short {
                 if short == opt_name {
                     return Some(opt);
                 }
-            }
-
-            if opt_name == opt.long {
-                return Some(opt);
             }
         }
 

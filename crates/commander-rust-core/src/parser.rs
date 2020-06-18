@@ -1,7 +1,7 @@
 use colored::Colorize;
 use std::ffi::OsString;
 use crate::Command;
-use crate::traits::{GetArgs, ContainsOpt, ValidateArgs, GetOpt};
+use crate::traits::{GetArgs, ValidateArgs, GetOpt};
 use crate::errors::{raise_error, UNKNOWN_OPT, UNKNOWN_SUB, INTERNAL_ERROR, MISMATCHED_ARGS};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -10,7 +10,6 @@ pub enum Segment {
     Long(String, Vec<Segment>),
     DoubleSub,
     Raw(String),
-    Error(String),
     // if first element is None, arguments belong to command
     // if it's not, arguments belong to the only sub_command
     Command(Option<String>, Vec<Segment>),
@@ -52,13 +51,13 @@ impl Segment {
                             .all(|cs| Self::is_lit_word(cs)) {
                             segments.push(Segment::Long(arg_os[2..].to_string(), vec![]));
                         } else {
-                            segments.push(Segment::Error(arg_os));
+                            segments.push(Segment::Raw(arg_os));
                         }
                     } else if Self::is_double_sub(&arg_os) {
                         opts_end = true;
                         segments.push(Segment::DoubleSub)
                     } else {
-                        segments.push(Segment::Error(arg_os.clone()));
+                        segments.push(Segment::Raw(arg_os.clone()));
                     }
                 } else if arg_os.starts_with('-') {
                     if Self::is_short(&arg_os) {
@@ -71,7 +70,7 @@ impl Segment {
                             segments.push(Segment::Short(key, vec![]));
                         }
                     } else {
-                        segments.push(Segment::Error(arg_os));
+                        segments.push(Segment::Raw(arg_os));
                     }
                 } else if arg_os.is_empty() {
                     continue;
@@ -128,11 +127,27 @@ impl Segment {
     }
 }
 
+#[derive(Debug)]
+pub enum TerminatorKind {
+    GlobalHelp,
+    GlobalVersion,
+    Help(String),
+    Version(String),
+    Other,
+}
+
+#[derive(Debug)]
+pub enum TerminatorType {
+    Version,
+    Help,
+    None,
+}
+
 pub type InputCmdArgs = Option<Segment>;
 pub type InputSubArgs = Option<Segment>;
 pub type InputGlobalOpts = Vec<Segment>;
 pub type InputLocalOpts = Vec<Segment>;
-pub type ParserResult = Result<((InputCmdArgs, InputSubArgs), InputLocalOpts, InputGlobalOpts), ()>;
+pub type ParserResult = Result<((InputCmdArgs, InputSubArgs), InputLocalOpts, InputGlobalOpts), TerminatorKind>;
 
 /// Note: Vec<Segment> doesn't contain the first element from `env::arg_os()`,
 /// it's usually the absolute path of cli, e.g., `/usr/bin/bash`.
@@ -156,7 +171,7 @@ impl SegmentWrapper {
                     let mut iter = args.iter();
 
                     while let Some(Segment::Raw(raw_str)) = iter.next() {
-                        if cmd.get_sub_command(&raw_str).is_some() {
+                        if cmd.get_sub_cmd(&raw_str).is_some() {
                             sub = Some(raw_str.clone());
                             args.remove(i);
                             break;
@@ -192,13 +207,14 @@ impl SegmentWrapper {
                     } else if sub_cmd_args.is_empty() && sub_name.is_empty() {
                         (Some(Segment::Command(None, cmd_args)), None)
                     } else {
-                        (Some(Segment::Command(None, cmd_args)),
-                         Some(Segment::Command(Some(sub_name), sub_cmd_args)))
+                        (Some(Segment::Command(None, cmd_args)), Some(Segment::Command(Some(sub_name), sub_cmd_args)))
                     };
                 }
             } else if !raws.is_empty() {
                 return (Some(Segment::Command(None, raws)), None);
             }
+        } else if !raws.is_empty() {
+            return (Some(Segment::Command(None, raws)), None);
         }
 
         (None, None)
@@ -224,8 +240,15 @@ impl SegmentWrapper {
 
         while i < self.len() {
             match &self.0[i] {
-                Segment::Short(name, _) | Segment::Long(name, _) => {
-                    if cmd.contains_option(name) {
+                Segment::Short(name, _) => {
+                    if cmd.get_short_opt(name).is_some() {
+                        input_global_opts.push(self.0.remove(i));
+                    } else {
+                        i += 1;
+                    }
+                }
+                Segment::Long(name, _) => {
+                    if cmd.get_long_opt(name).is_some() {
                         input_global_opts.push(self.0.remove(i));
                     } else {
                         i += 1;
@@ -328,21 +351,21 @@ impl SegmentWrapper {
         }
     }
 
-    fn check_options<T: ContainsOpt>(options: &[Segment], cmd: &T) -> Result<(), String> {
+    fn check_options<T: GetOpt>(options: &[Segment], cmd: &T) -> Result<(), String> {
         let mut all = true;
         let mut error = String::new();
 
         for opt in options {
             match opt {
                 Segment::Short(name, _) => {
-                    if !cmd.contains_option(name) {
+                    if cmd.get_short_opt(name).is_none() {
                         all = false;
                         error = format!("{} `{}`", UNKNOWN_OPT, format!("-{}", name).bold());
                         break;
                     }
                 }
                 Segment::Long(name, _) => {
-                    if !cmd.contains_option(name) {
+                    if cmd.get_long_opt(name).is_none() {
                         all = false;
                         error = format!("{} `{}`", UNKNOWN_OPT, format!("--{}", name).bold());
                         break;
@@ -388,9 +411,9 @@ impl SegmentWrapper {
         let mut error = false;
 
         match target {
-            Segment::Short(_, args) |
-            Segment::Long(_, args) |
-            Segment::Command(_, args) => {
+            Segment::Short(_, args)
+            | Segment::Long(_, args)
+            | Segment::Command(_, args) => {
                 if args.len() < min || args.len() > max {
                     def_args_fmt = {
                         let tmp = source.get_args();
@@ -460,10 +483,37 @@ impl SegmentWrapper {
         Ok(())
     }
 
+    fn check_gol_option_arguments<T: GetOpt>(ins: &T, options: &[Segment]) -> Result<(), String> {
+        for opt in options.iter() {
+            match opt {
+                Segment::Long(name, _) => {
+                    if let Some(def_opt) = ins.get_long_opt(name) {
+                        if let Err(err) = Self::check_arguments(opt, def_opt) {
+                            return Err(err);
+                        }
+                    }
+                }
+                Segment::Short(name, _) => {
+                    if let Some(def_opt) = ins.get_short_opt(name) {
+                        if let Err(err) = Self::check_arguments(opt, def_opt) {
+                            return Err(err);
+                        }
+                    }
+                }
+                _ => continue,
+            }
+        }
+
+        Ok(())
+    }
+
     fn parse(&mut self, cmd: &Command) -> ParserResult {
         let mut success = true;
 
         let tmp = if !self.0.is_empty() {
+            // if self.0 is non-empty, do operations below
+            // because some operations need to index at 0 which may raise errors
+
             // `divide_option_arguments`, `divide_cmd_arguments`
             // `remove_cmd`, `remove_global_options`, `remove_options`, `remove_raws`
             // it's best to call them one by one
@@ -485,7 +535,7 @@ impl SegmentWrapper {
             // u can assume `Command` is valid
             if let Some(sub_segs) = &sub_segs {
                 if let Segment::Command(Some(sub_cmd_name), _) = sub_segs {
-                    if let Some(sub_cmd) = cmd.get_sub_command(&sub_cmd_name) {
+                    if let Some(sub_cmd) = cmd.get_sub_cmd(&sub_cmd_name) {
                         // if the sub-command offered is one of the sub-commands registered
                         // try to check whether all local-options belong to the sub-command offered or not
                         if let Err(err) = Self::check_options(&local_options, sub_cmd) {
@@ -506,11 +556,18 @@ impl SegmentWrapper {
                         success = raise_error(format!("{} `{}`", UNKNOWN_OPT, format!("--{}", name).bold()));
                     }
                 }
-            };
+            }
+
+            // check global options
+            // In fact, this step will never raise error
+            // because that `global_option` is parsed from `cmd`, so they are compatible
+            if let Err(err) = Self::check_options(&global_options, cmd) {
+                success = raise_error(err);
+            }
 
             // step-2: validate that if arguments defined and arguments inputted are equivalent
 
-            // check arguments of command if it was offered
+            // check arguments of command if it offered
             if let Some(cmd_segs) = &cmd_segs {
                 if let Segment::Command(none, _) = cmd_segs {
                     // command shouldn't have a name
@@ -520,55 +577,45 @@ impl SegmentWrapper {
                         }
                     }
                 }
-            };
+            }
 
-            // check arguments of sub-command if it was offered
+            // check arguments of sub-command if it offered
             if let Some(sub_segs) = &sub_segs {
                 if let Segment::Command(sub_name, _) = sub_segs {
                     if let Some(sub_name) = sub_name {
-                        if let Some(sub_cmd) = cmd.get_sub_command(sub_name) {
+                        if let Some(sub_cmd) = cmd.get_sub_cmd(sub_name) {
                             if let Err(err) = Self::check_arguments(sub_segs, sub_cmd) {
                                 success = raise_error(err);
                             }
 
                             // check arguments of local options of specific sub-command
-                            for local_opt in local_options.iter() {
-                                match local_opt {
-                                    Segment::Short(name, _) | Segment::Long(name, _) => {
-                                        if let Some(def_opt) = sub_cmd.get_opt(name) {
-                                            if let Err(err) = Self::check_arguments(local_opt, def_opt) {
-                                                success = raise_error(err);
-                                            }
-                                        }
-                                    }
-                                    _ => continue,
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-
-            // check arguments of global options
-            for global_opt in global_options.iter() {
-                match global_opt {
-                    Segment::Short(name, _) | Segment::Long(name, _) => {
-                        if let Some(def_opt) = cmd.get_opt(name) {
-                            if let Err(err) = Self::check_arguments(global_opt, def_opt) {
+                            if let Err(err) = Self::check_gol_option_arguments(sub_cmd, &local_options) {
                                 success = raise_error(err);
                             }
                         }
                     }
-                    _ => continue,
                 }
-            };
+            }
+
+            // check arguments of global options
+            if let Err(err) = Self::check_gol_option_arguments(cmd, &global_options) {
+                success = raise_error(err);
+            }
 
             ((cmd_segs, sub_segs), local_options, global_options)
         } else {
+            // check if user doesn't input any arguments (sel.0 is empty)
+            // but at this situation, command might accept arguments
+            // if do not do any checking, it will raise some `Rust` runtime errors which are difficult to understand and debug
+            // so do checking through constructing an empty `Segment::Command`
+            if let Err(err) = Self::check_arguments(&Segment::Command(None, vec![]), cmd) {
+                success = raise_error(err);
+            }
+
             ((None, None), vec![], vec![])
         };
 
-        if success { Ok(tmp) } else { Err(()) }
+        if success { Ok(tmp) } else { Err(TerminatorKind::Other) }
     }
 
     #[cfg(feature = "test")]
@@ -576,11 +623,70 @@ impl SegmentWrapper {
         self.parse(cmd)
     }
 
+    pub fn get_terminator(&self) -> TerminatorType {
+        for seg in self.0.iter() {
+            match seg {
+                Segment::Short(name, _) => {
+                    if name == "v" {
+                        return TerminatorType::Version;
+                    } else if name == "h" {
+                        return TerminatorType::Help;
+                    }
+                }
+                Segment::Long(name, _) => {
+                    if name == "version" {
+                        return TerminatorType::Version;
+                    } else if name == "help" {
+                        return TerminatorType::Help;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        TerminatorType::None
+    }
+
     // return value is only using for testing
     pub fn parse_cli(cmd: &Command) -> ParserResult {
         // first element is useless.collect();
         let args_os: Vec<OsString> = std::env::args_os().skip(1).collect();
-        let mut segment_wrapper = SegmentWrapper(Segment::from_vec(args_os));
+        let segments = Segment::from_vec(args_os);
+        let mut segment_wrapper = SegmentWrapper(segments);
+        let terminator = segment_wrapper.get_terminator();
+        let first_sub = if segment_wrapper.is_empty() {
+            None
+        } else if let Segment::Raw(may_sub_name) = &segment_wrapper.0[0] {
+            cmd.get_sub_cmd(may_sub_name)
+        } else { None };
+
+        // if any terminator inputted and defined (e.g., v, version, h, help)
+        // it will not parse, because they have special callbacks
+        match terminator {
+            TerminatorType::Help => {
+                if let Some(sub) = first_sub {
+                    if sub.get_long_opt("help").is_some() {
+                        return Err(TerminatorKind::Help(sub.name.clone()));
+                    }
+                }
+
+                if cmd.get_long_opt("help").is_some() {
+                    return Err(TerminatorKind::GlobalHelp);
+                }
+            }
+            TerminatorType::Version => {
+                if let Some(sub) = first_sub {
+                    if sub.get_long_opt("version").is_some() {
+                        return Err(TerminatorKind::Version(sub.name.clone()));
+                    }
+                }
+
+                if cmd.get_long_opt("version").is_some() {
+                    return Err(TerminatorKind::GlobalVersion);
+                }
+            }
+            TerminatorType::None => {}
+        }
 
         segment_wrapper.parse(cmd)
     }

@@ -5,7 +5,7 @@ use commander_rust_core::traits::{PushOptions, PushArgument};
 fn sub_command_fmt_test() {
     let sub_cmd = SubCommand::from(r#"main_command -> sub_command"#);
     assert_eq!(
-        format!("\nUSAGE:\n    main_command sub_command\n\n\n"),
+        "\n\u{1b}[1;3mUSAGE\u{1b}[0m:\n    main_command sub_command\n\n\n",
         format!("{}", sub_cmd),
     );
 
@@ -14,7 +14,7 @@ fn sub_command_fmt_test() {
     sub_cmd.push_argument(Argument::from("<Makka_Pakka>"));
     sub_cmd.push_argument(Argument::from("[Upsy_Daisy]"));
     assert_eq!(
-        format!("DESCRIPTION:\n    hello babies\n\nUSAGE:\n    main-command sub-command <Makka_Pakka> [Upsy_Daisy]\n\n\n"),
+        "\u{1b}[1;3mDESCRIPTION\u{1b}[0m:\n    hello babies\n\n\u{1b}[1;3mUSAGE\u{1b}[0m:\n    main-command sub-command <Makka_Pakka> [Upsy_Daisy]\n\n\n",
         format!("{}", sub_cmd),
     );
 
@@ -27,19 +27,7 @@ fn sub_command_fmt_test() {
     sub_cmd.push_option(Options::from(r#"--all <a> <b> [..c], "This is using for testing""#));
     sub_cmd.push_option(Options::from(r#"--pass <a> <b> [..c]"#));
     assert_eq!(
-        format!(
-r#"DESCRIPTION:
-    hello babies
-
-USAGE:
-    main-command sub-command <Makka_Pakka> [Upsy_Daisy] [--options]
-
-OPTIONS:
-    -t, --test <a> <b> [..c]    This is using for testing
-        --all <a> <b> [..c]     This is using for testing
-        --pass <a> <b> [..c]
-
-"#),
+        "\u{1b}[1;3mDESCRIPTION\u{1b}[0m:\n    hello babies\n\n\u{1b}[1;3mUSAGE\u{1b}[0m:\n    main-command sub-command <Makka_Pakka> [Upsy_Daisy] [--options]\n\n\u{1b}[1;3mOPTIONS\u{1b}[0m:\n    -t, --test <a> <b> [..c]    This is using for testing\n        --all <a> <b> [..c]     This is using for testing\n        --pass <a> <b> [..c]\n\n",
         format!("{}", sub_cmd),
     );
 }

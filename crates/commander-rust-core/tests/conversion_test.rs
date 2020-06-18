@@ -193,7 +193,7 @@ fn converter_test() {
         .iter()
         .map(|s| OsString::from(s)).collect();
     let mut segments = SegmentWrapper(Segment::from_vec(args_os));
-    let converter = Application::from_parser_result(segments.parse_test(&command), &command).unwrap();
+    let converter = Application::from_parser_result(&segments.parse_test(&command), &command).unwrap();
 
     #[derive(Eq, PartialEq, Debug)]
     struct Headers {

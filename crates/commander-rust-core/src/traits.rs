@@ -24,10 +24,7 @@ pub trait ValidateArgs {
     fn validate_args(&self) -> bool;
 }
 
-pub trait ContainsOpt {
-    fn contains_option(&self, opt: &str) -> bool;
-}
-
 pub trait GetOpt {
-    fn get_opt(&self, opt: &str) -> Option<&Options>;
+    fn get_long_opt(&self, opt: &str) -> Option<&Options>;
+    fn get_short_opt(&self, opt: &str) -> Option<&Options>;
 }

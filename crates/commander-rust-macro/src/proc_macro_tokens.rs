@@ -1,5 +1,8 @@
-use syn::{ Ident, token, bracketed };
+use syn::{ Ident, token, bracketed, LitStr };
 use syn::parse::{ Parse, ParseStream, Result };
+use quote::ToTokens;
+use quote::{ quote };
+use proc_macro2::{ TokenStream as TokenStream2 };
 
 #[derive(Debug)]
 pub(crate) struct SubFnsList {
@@ -43,5 +46,31 @@ impl Parse for Register {
             cmd,
             sub_fns_list,
         })
+    }
+}
+
+
+#[derive(Debug)]
+pub(crate) struct OptionVersion(Option<LitStr>);
+
+impl Parse for OptionVersion {
+    fn parse(stream: ParseStream) -> Result<Self> {
+        if stream.peek(LitStr) {
+            Ok(OptionVersion(Some(stream.parse::<LitStr>()?)))
+        } else {
+            Ok(OptionVersion(None))
+        }
+    }
+}
+
+impl ToTokens for OptionVersion {
+    fn to_tokens(&self, stream: &mut TokenStream2) {
+        let tmp = if let Some(lit_str) = &self.0 {
+            quote! { { #lit_str } }
+        } else {
+            quote! { { std::env!("CARGO_PKG_VERSION") } }
+        };
+
+        tmp.to_tokens(stream);
     }
 }

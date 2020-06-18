@@ -1,6 +1,7 @@
 use proc_macro2::{ Span as Span2, TokenStream as TokenStream2 };
 use syn::Error;
 
+
 pub fn compile_error(span: Span2, msg: &str) -> TokenStream2 {
     Error::new(span, msg).to_compile_error()
 }
@@ -14,8 +15,8 @@ pub mod msg {
     pub const CMD_IS_ONLY: &str = "can only define #[command] once.";
     pub const REGISTER_UNKNOWN_SUB_CMD: &str = "try to register unknown sub-command, it was not defined as sub-command using #[sub_command].";
     pub const REGISTER_UNKNOWN_CMD: &str = "try to register an unknown command, it was not defined as command using #[command].";
-    pub const HAVENT_CALLED_REGISTER_FNS: &str = "you haven't called macro `register`, call it firstly";
-    pub const DONT_NEED_PARAMETERS: &str = "this function doesn't need any parameters";
-    pub const DONT_CALL_REGISTER_MULTIPLE_TIMES: &str = "don't call `register` multiple times";
-    pub const UNUSED_ARGUMENT: &str = "unused argument";
+    pub const UNUSED_ARGUMENT: &str = "unused argument.";
+    // default options used
+    pub const OPTION_VERSION_RESERVED: &str = "`-v` and `--version` are reserved keywords, remove them from your options";
+    pub const OPTION_HELP_RESERVED: &str = "`-h` and `--help` are reserved keyword, remove them from your options";
 }

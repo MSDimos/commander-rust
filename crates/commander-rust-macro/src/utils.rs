@@ -23,26 +23,19 @@ pub(crate) const TOKEN_APPLICATION: &str = "Application";
 pub(crate) const TOKEN_ARG: &str = "Arg";
 pub(crate) const TOKEN_ARGS: &str = "Args";
 pub(crate) const TOKEN_MIXED: &str = "Mixed";
+pub(crate) const TOKEN_TERMINATOR_KIND: &str = "TerminatorKind";
 pub(crate) const TRAIT_PUSH_ARGUMENT: &str = "PushArgument";
 pub(crate) const TRAIT_PUSH_OPTIONS: &str = "PushOptions";
 pub(crate) const TRAIT_PUSH_SUB_COMMAND: &str = "PushSubCommand";
 pub(crate) const TRAIT_FROM_ARG: &str = "FromArg";
 pub(crate) const TRAIT_FROM_ARGS: &str = "FromArgs";
 pub(crate) const TRAIT_FROM_APP: &str = "FromApp";
-// pub(crate) const TRAIT_VALIDATE_ARGS: &str = "ValidateArgs";
-pub(crate) const GET_ONLY_COMMAND: &str = "get_only_command";
-// pub(crate) const PATH_CONVERTER: &str = "converter";
 pub(crate) const PATH_PARSER: &str = "parser";
 pub(crate) const PATH_TRAITS: &str = "traits";
 pub(crate) const FN_CALL_EXTRA_TOKEN: &str = "extra_token";
 
 pub(crate) fn decorate_ident(source: Ident) -> Ident {
     format_ident!("{}{}{}", TOKEN_PREFIX, source, TOKEN_SUFFIX)
-}
-
-pub(crate) fn decorate_raw_ident<T: Display>(source: T) -> Ident {
-    let s = format!("{}", source);
-    format_ident!("{}{}{}", TOKEN_PREFIX, s, TOKEN_SUFFIX)
 }
 
 pub(crate) fn decorate_raw_idents<T: Display>(sources: Vec<T>) -> Ident {
@@ -159,6 +152,7 @@ pub(crate) fn generate_inputs(
     inputs: &Punctuated<FnArg, token::Comma>,
     def_args: &Arguments,
     app_ident: &Ident,
+    is_sub_command: bool,
 ) -> TokenStream2 {
     let mut args_map = HashMap::new();
     let mut really_inputs = vec![];
@@ -168,6 +162,7 @@ pub(crate) fn generate_inputs(
     let trait_from_arg = import_raw_type(vec![PATH_TRAITS, TRAIT_FROM_ARG]);
     let trait_from_args = import_raw_type(vec![PATH_TRAITS, TRAIT_FROM_ARGS]);
     let trait_from_app = import_raw_type(vec![PATH_TRAITS, TRAIT_FROM_APP]);
+    let fn_get_arg = if is_sub_command { format_ident!("get_sub_arg") } else { format_ident!("get_cmd_arg") };
 
     for def_arg in def_args.inner.iter() {
         args_map.insert(def_arg.name.to_string(), def_arg.ty.clone());
@@ -186,11 +181,16 @@ pub(crate) fn generate_inputs(
                             {
                                 let mut args = &#ty_args(vec![]);
 
-                                if let Some(#ty_mixed::Multiply(_args)) = #app_ident.get_sub_arg(#arg_name) {
+                                if let Some(#ty_mixed::Multiply(_args)) = #app_ident.#fn_get_arg(#arg_name) {
                                     args = _args;
                                 }
 
-                                <#ty as #trait_from_args>::from_args(args).unwrap()
+                                if let Ok(tmp) = <#ty as #trait_from_args>::from_args(args) {
+                                    tmp
+                                } else {
+                                    eprintln!("parse failed, can't parse input `{}` as type `{}`", args, stringify!(#ty));
+                                    std::process::exit(1);
+                                }
                             }
                         });
                     } else {
@@ -198,18 +198,26 @@ pub(crate) fn generate_inputs(
                             {
                                 let mut arg = &#ty_arg(String::new());
 
-                                if let Some(#ty_mixed::Single(_arg)) = #app_ident.get_sub_arg(#arg_name) {
+                                if let Some(#ty_mixed::Single(_arg)) = #app_ident.#fn_get_arg(#arg_name) {
                                     arg = _arg;
                                 }
 
-                                <#ty as #trait_from_arg>::from_arg(arg).unwrap()
+                                if let Ok(tmp) = <#ty as #trait_from_arg>::from_arg(arg) {
+                                    tmp
+                                } else {
+                                    eprintln!("parse failed, can't parse input `{}` as type `{}`", arg, stringify!(#ty));
+                                    std::process::exit(1);
+                                }
                             }
                         })
                     }
                 } else {
                     really_inputs.push(quote_spanned! {span=>
-                         {
-                            <#ty as #trait_from_app>::from_app(&#app_ident).unwrap()
+                        if let Ok(tmp) = <#ty as #trait_from_app>::from_app(&#app_ident) {
+                            tmp
+                        } else {
+                            eprintln!("parse failed, can't parse type `App` as type `{}`", stringify!(#ty));
+                            std::process::exit(1);
                         }
                     });
                 }
@@ -217,6 +225,6 @@ pub(crate) fn generate_inputs(
         }
     }
 
-    let tmp = quote! { #(#really_inputs),* };
+    let tmp = quote! { #(#really_inputs,)* };
     tmp
 }

@@ -12,20 +12,10 @@ fn command_fmt_test() {
     command.push_sub_command(sub_cmd);
     command.push_sub_command(SubCommand::from(r#"duck -> help, "Print help information""#));
     command.push_sub_command(SubCommand::from(r#"duck -> version, "Print version information""#));
+    print!("{}", command);
     assert_eq!(
-r#"DESCRIPTION:
-    e^{ix} = cos(x) + isin(x)
-
-USAGE:
-    duck <..Makka_Pakka> [sub_commands]
-
-
-SUB_COMMANDS:
-    sub        hello babies
-    help       Print help information
-    version    Print version information
-
-"#,
+        "\u{1b}[1;3mDESCRIPTION\u{1b}[0m:\n    e^{ix} = cos(x) + isin(x)\n\n\u{1b}[1;3mUSAGE\u{1b}[0m:\n    duck <..Makka_Pakka> [sub_commands]\n\n\n\u{1b}[1;3mSUB_COMMANDS\u{1b}[0m:\n    sub        hello babies\n    help       Print help information\n    version    Print version information\n\n",
         format!("{}", command),
     );
+
 }

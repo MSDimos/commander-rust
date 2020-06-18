@@ -22,4 +22,3 @@ default-features = false
 
 [dependencies.commander-rust-macro]
 path = "crates/commander-rust-macro"
-default-features = false

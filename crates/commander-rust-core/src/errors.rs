@@ -13,7 +13,7 @@ pub fn raise_error(msg: String) -> bool {
     if !cfg!(feature = "test") {
         let prefix = "CLI runtime error: ".bold().red();
         // output to the standard error pipe
-        eprintln!("{}{}", prefix, msg);
+        eprintln!("\n{}{}\n", prefix, msg);
         exit(1);
     }
 
