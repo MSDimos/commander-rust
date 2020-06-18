@@ -1,15 +1,56 @@
+# Glance
+See `example/glance.rs` for more details.
+```rust
+#[default_options]
+#[option(--https, "use https instead of http")]
+#[sub_command(connect <address>, "connect to the address")]
+fn connect(address: Option<Address>, opts: Opts, global_opts: GlobalOpts) {
+    /* .. */
+}
+
+#[default_options]
+#[sub_command(disconnect <address>, "disconnect the connection")]
+fn disconnect(address: Option<Address>) {
+    /* .. */
+}
+
+#[default_options]
+#[option(--proxy <proxy_address>, "use proxy to connect")]
+#[command(net, "network tool")]
+fn net() { /* .. */}
+
+fn main() {
+    execute!(net, [connect, disconnect]);
+}
+```
+
+# Note
+The current `master` branch will no longer be supported. 
+And the branch `pre-alpha` will be the `master` branch once it's stable.
+
+# Usage
+The current `commander_rust` in `crate.io` is no longer supported.
+Before it becomes stable, `github` will be used as distribution source. Add it to your dependencies.
+```toml
+[dependencies.commander_rust]
+git = "https://github.com/MSDimos/commander-rust/"
+branch = "pre-alpha"
+
+# or
+commander_rust = { git = "https://github.com/MSDimos/commander-rust/", branch = "pre-alpha" }
+```
+
 # Viewpoint
 
-As I think, developers should devote more time to the realization of functions instead of leaning how to use `command line interface (CLI)`. So a crate of `CLI` should be easy to use.
+As I think, developers should devote more time to the realization of functions instead of leaning how to use `command line interface (CLI)`.
+ So a crate of `CLI` should be easy to use.
 Specifically, it should have the following advantages:
 
 - Firstly, it should have less `API`s.
 - Secondly, it should be intuitive enough to use. What u see is what u get.
 - Thirdly, it should make full use of the advantages of programming language.
 
-Inspired by [Rocket](https://rocket.rs/) and [commander.js](https://github.com/tj/commander.js/), the crate is born.# Examples
-
-You can check examples in folder `examples` of this crate for full usage of `commander_rust`.
+Inspired by [Rocket](https://rocket.rs/) and [commander.js](https://github.com/tj/commander.js/), the crate is born.
 
 # Design concept
 
@@ -60,12 +101,11 @@ fn test_sub(opts: Opts) {
 }
 ```
 
-
-
 Options without arguments are also called `flag` or `switch` (Ha, not `Nintendo Switch`).
 
 ### restriction of `#[option]`
-All options should be defined above `command` or `sub_command`.  Options defined below `command` or `sub_command` are ignored. See example below:
+All options should be defined above `command` or `sub_command`.  
+All options defined below `command` or `sub_command` will be ignored. See example below:
 ```rust
 // valid
 #[option(--display, "display something")]
@@ -90,7 +130,7 @@ fn sub_cmd_fn2() {}
 ## `#[default_options]`
 
 ```rust
-Exampl#[default_options]
+#[default_options]
 #[sub_command(test)]
 fn test() {}
 
@@ -103,7 +143,9 @@ fn test() {}
 
 ### restriction of `#[default_options]`
 
-Once you use `#[default_options]` , other options of this `sub_command` or `command` can't use short names `-v` `-h` or long names `--version` `--help`. See example below:
+Once you use `#[default_options]`,
+other options of this `sub_command` or `command` can't use short names `-v` `-h` or long names `--version` `--help`.
+See example below:
 
 ```rust
 #[default_options]
@@ -138,7 +180,7 @@ They have the similar syntax which are shown below:
 
 Run the cli app. If you don't call it, the cli app will not run.
 
-Syntax is shown as examples below:
+Syntax is shown as example below:
 
 ```rust
 // Note, these `*_fn_name*` are names of function instead of names of `sub_command` or `command`
@@ -170,8 +212,6 @@ fn main() {
 }
 ```
 
-
-
 # Extract arguments
 
 ## types of arguments
@@ -190,7 +230,7 @@ Note: there are several restrictions:
 1. All `optional` arguments should be **after** all `required` arguments.
 
 ```rust
-Exampl// valid
+// valid
 #[option(test <a> <b> [c] [d])]
 // invalid
 #[option(test <a> [b] <c> [d])]
@@ -257,7 +297,9 @@ fn connect(pkg: Pkg) {
 }
 ```
 
-I don't want to use `String`, but I use a type named `Pkg`. I want to decode user's input which is formatted like `react=16.13.1`. Now, let's define the struct `Pkg`.
+I don't want to use `String`, but I use a type named `Pkg`.
+I want to decode user's input which is formatted like `react=16.13.1`.
+Now, let's define the struct `Pkg`.
 
 ```rust
 struct Version(u8, u8, u8);
@@ -313,17 +355,20 @@ Ha, it's done. Now you can use the cli app like:
 $ /path/of/download react=16.13.1
 ```
 
-But there are some bugs here. Look the `line 8` `line 14` `line 22` in the code above. It returned the `Err`. It means sometimes it will crash. Try to input like this:
+But there are some bugs here.
+Look the `line 8` `line 14` `line 22` in the code above.
+It returned the `Err`. It means sometimes it will crash.
+Try to input like this:
 
 ```shell
 // Error, parse failed, can't parse input `react=16` as type `Pkg`
 $ /path/of/download react
 ```
 
-How to catch errors and handle them yourself ? It's easy, do u remember that there are several types which implement the trait `FromArg`? `Option<T: FromArg>` and `Result<T: FromArg, T::Error>` are two of them. So, change the signature of function `do# Examples
-
-You can check examples in folder `examples` of this crate for full usage of `commander_rust`.wnload` like:
-
+How to catch errors and handle them yourself ? 
+It's easy, do u remember that there are several types which implement the trait `FromArg`? 
+`Option<T: FromArg>` and `Result<T: FromArg, T::Error>` are two of them. 
+So, change the signature of function:
 ```rust
 #[command(download <pkg>, "download an package")]
 // Or pkg: Result<Pkg, ()>, both are okay
@@ -340,7 +385,7 @@ fn connect(pkg: Option<Pkg>) {
 }
 ```
 
-Now, If u input:
+Now, If you input:
 
 ```shell
 // customize error, can't parse package.
@@ -353,7 +398,7 @@ If you want to download multiply packages like:
 $ /path/of/download react=16.13.1 react-redux=7.2.0
 ```
 
-Change signature of function `download`:
+Change signature of function `download` like:
 
 ```rust
 #[command(download <pkg>, "download an package")]
@@ -381,7 +426,9 @@ fn connect(pkgs: Vec<Option<Pkg>>) {
 
 ## `Opts` and `GlobalOpts`
 
-I offer u two types to get options. One is `Opts`, the other one is `GlobalOpts`. By names, you should be able to know the difference between them.
+I offer u two types to get options. One is `Opts`,
+the other one is `GlobalOpts`. 
+By names, you should be able to know the difference between them.
 
 ```rust
 #[option(-f, --force, "force to install even if this package has already installed")]
@@ -536,13 +583,13 @@ fn eat_fn(food: String, mutex_thing: Result<MutexThing, String>) {
 
 You can check examples in folder `examples` of this crate for full usage of `commander_rust`.
 
-## Contribution
+# Contribution
 
 Because of something that happened to me, I stopped maintaining the previous version of this project for a long time. 
 
-After all that, I have time to maintain the project. I am sorry for those people who opened issues, because of refactoring of the project, I can't and needn't to respond them any more.
-
-Now, from zero, any useful contribution is welcome.
+After all that, I have time to maintain the project. 
+I am sorry for those people who opened issues, because of refactoring of the project, I can't and needn't to respond them any more.
+Now, starting from scratch, any useful contribution is welcome.
 
 If you find bug and fix it, please create an `Merge Request`.
 
